@@ -8,8 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import settings
-from app.database import init_db, engine
-from app.routers import auth, listings, shops, search, favourites, referral, payments, notifications, admin, upload
+from app.database import engine
 
 logging.basicConfig(
     format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
@@ -19,40 +18,48 @@ logger = logging.getLogger("onbozor")
 
 # ── Sentry ──
 if settings.SENTRY_DSN:
-    import sentry_sdk
-    sentry_sdk.init(
-        dsn=settings.SENTRY_DSN,
-        environment=settings.ENVIRONMENT,
-        traces_sample_rate=0.2,
-        profiles_sample_rate=0.1,
-    )
-    logger.info("Sentry initialized (env=%s)", settings.ENVIRONMENT)
+    try:
+        import sentry_sdk
+        sentry_sdk.init(
+            dsn=settings.SENTRY_DSN,
+            environment=settings.ENVIRONMENT,
+            traces_sample_rate=0.2,
+        )
+        logger.info("Sentry initialized (env=%s)", settings.ENVIRONMENT)
+    except Exception as e:
+        logger.warning("Sentry init failed: %s", e)
 
 
-# ── Bot webhook setup ──
 async def _setup_bot_webhook():
     if not settings.WEBHOOK_URL:
+        logger.info("WEBHOOK_URL not set, skipping webhook setup")
         return
-    import httpx
-    url = f"https://api.telegram.org/bot{settings.BOT_TOKEN}/setWebhook"
-    webhook_url = f"{settings.WEBHOOK_URL}/bot/webhook"
-    async with httpx.AsyncClient() as client:
-        resp = await client.post(url, json={
-            "url": webhook_url,
-            "allowed_updates": ["message", "callback_query"],
-            "drop_pending_updates": True,
-        })
-        data = resp.json()
-        if data.get("ok"):
-            logger.info("Bot webhook set: %s", webhook_url)
-        else:
-            logger.error("Bot webhook failed: %s", data)
+    try:
+        import httpx
+        api_url = f"https://api.telegram.org/bot{settings.BOT_TOKEN}/setWebhook"
+        webhook_url = f"{settings.WEBHOOK_URL}/bot/webhook"
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.post(api_url, json={
+                "url": webhook_url,
+                "allowed_updates": ["message", "callback_query"],
+                "drop_pending_updates": True,
+            })
+            data = resp.json()
+            if data.get("ok"):
+                logger.info("Bot webhook set: %s", webhook_url)
+            else:
+                logger.error("Bot webhook failed: %s", data)
+    except Exception as e:
+        logger.error("Webhook setup error: %s", e)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await init_db()
-    logger.info("Database initialized")
+    logger.info("Starting OnBozor API (env=%s)", settings.ENVIRONMENT)
+    async with engine.begin() as conn:
+        from sqlalchemy import text
+        await conn.execute(text("SELECT 1"))
+    logger.info("Database connection OK")
     await _setup_bot_webhook()
     yield
     await engine.dispose()
@@ -62,7 +69,6 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="OnBozor API",
     version="1.0.0",
-    description="O'zbekiston bozori — Telegram Web App backend",
     lifespan=lifespan,
     docs_url="/docs" if settings.ENVIRONMENT != "production" else None,
     redoc_url=None,
@@ -105,33 +111,33 @@ async def rate_limit_middleware(request: Request, call_next):
     return await call_next(request)
 
 
-# ── Request Logging ──
 @app.middleware("http")
 async def logging_middleware(request: Request, call_next):
     start = time.time()
     response = await call_next(request)
     duration = round((time.time() - start) * 1000, 1)
-    logger.info(
-        "%s %s → %s (%sms)",
-        request.method, request.url.path, response.status_code, duration,
-    )
+    logger.info("%s %s → %s (%sms)", request.method, request.url.path, response.status_code, duration)
     return response
 
 
-# ── Global Error Handler ──
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    logger.error("Unhandled error: %s %s — %s", request.method, request.url.path, exc, exc_info=True)
+    logger.error("Unhandled: %s %s — %s", request.method, request.url.path, exc, exc_info=True)
     if settings.SENTRY_DSN:
-        import sentry_sdk
-        sentry_sdk.capture_exception(exc)
+        try:
+            import sentry_sdk
+            sentry_sdk.capture_exception(exc)
+        except Exception:
+            pass
     return JSONResponse(
         status_code=500,
         content={"error": "server_error", "detail": "Serverda xatolik yuz berdi"},
     )
 
 
-# ── Routers ──
+# ── Routers (lazy import to avoid circular deps) ──
+from app.routers import auth, listings, shops, search, favourites, referral, payments, notifications, admin, upload
+
 app.include_router(auth.router)
 app.include_router(listings.router)
 app.include_router(shops.router)
@@ -144,32 +150,35 @@ app.include_router(admin.router)
 app.include_router(upload.router)
 
 
-# ── Health Check ──
 @app.get("/health")
 async def health_check():
     from sqlalchemy import text
     try:
         async with engine.connect() as conn:
             await conn.execute(text("SELECT 1"))
-        db_status = "ok"
+        db_ok = True
     except Exception:
-        db_status = "error"
+        db_ok = False
 
-    return {
-        "status": "ok" if db_status == "ok" else "degraded",
-        "database": db_status,
-        "version": "1.0.0",
-        "environment": settings.ENVIRONMENT,
-    }
+    status = "ok" if db_ok else "degraded"
+    code = 200 if db_ok else 503
+    return JSONResponse(
+        status_code=code,
+        content={"status": status, "database": "ok" if db_ok else "error", "version": "1.0.0"},
+    )
 
 
-# ── Bot Webhook Endpoint ──
 @app.post("/bot/webhook")
 async def bot_webhook(request: Request):
-    from telegram import Update
-    from app.bot_app import bot_application
+    try:
+        from telegram import Update
+        from app.bot_app import get_bot_application
 
-    data = await request.json()
-    update = Update.de_json(data, bot_application.bot)
-    await bot_application.process_update(update)
-    return {"ok": True}
+        bot_app = await get_bot_application()
+        data = await request.json()
+        update = Update.de_json(data, bot_app.bot)
+        await bot_app.process_update(update)
+        return {"ok": True}
+    except Exception as e:
+        logger.exception("Bot webhook error: %s", e)
+        return JSONResponse(status_code=200, content={"ok": False, "error": str(e)})
