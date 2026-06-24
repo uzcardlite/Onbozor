@@ -195,7 +195,7 @@ async def confirm_listing(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Admin tasdiqlashini kuting."
     )
 
-    for admin_id in settings.ADMIN_IDS:
+    for admin_id in settings.admin_ids_list:
         try:
             from app.keyboards.main import admin_listing_keyboard
             await context.bot.send_message(

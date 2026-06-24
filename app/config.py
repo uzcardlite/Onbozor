@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     MAX_LISTINGS_PER_USER: int = 10
     REFERRAL_BONUS_PERCENT: int = 5
 
-    CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:5173"]
+    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:5173"
 
     RATE_LIMIT_PER_MINUTE: int = 100
 
@@ -33,8 +33,25 @@ class Settings(BaseSettings):
     WEBHOOK_URL: str = ""
     ENVIRONMENT: str = "development"
 
+    ADMIN_IDS: str = ""
+
     class Config:
         env_file = ".env"
+        extra = "ignore"
+
+    @property
+    def admin_ids_list(self) -> list[int]:
+        if not self.ADMIN_IDS:
+            return []
+        return [int(x.strip()) for x in self.ADMIN_IDS.split(",") if x.strip()]
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        import json
+        val = self.CORS_ORIGINS
+        if val.startswith("["):
+            return json.loads(val)
+        return [x.strip() for x in val.split(",") if x.strip()]
 
     @property
     def async_database_url(self) -> str:

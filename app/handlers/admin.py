@@ -18,7 +18,7 @@ from app.models.user import User
 
 
 def is_admin(user_id: int) -> bool:
-    return user_id in settings.ADMIN_IDS
+    return user_id in settings.admin_ids_list
 
 
 async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
