@@ -1,7 +1,7 @@
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.listing import Listing
-from app.constants import ListingStatus
+from app.models.enums import ListingStatusEnum
 
 
 async def create_listing(session: AsyncSession, **kwargs) -> Listing:
@@ -14,43 +14,43 @@ async def create_listing(session: AsyncSession, **kwargs) -> Listing:
 
 async def get_pending_listings(session: AsyncSession) -> list[Listing]:
     result = await session.execute(
-        select(Listing).where(Listing.status == ListingStatus.PENDING).order_by(Listing.created_at.desc())
+        select(Listing).where(Listing.status == ListingStatusEnum.PENDING).order_by(Listing.created_at.desc())
     )
     return list(result.scalars().all())
 
 
-async def get_user_listings(session: AsyncSession, user_id: int) -> list[Listing]:
+async def get_user_listings(session: AsyncSession, user_id) -> list[Listing]:
     result = await session.execute(
         select(Listing).where(Listing.user_id == user_id).order_by(Listing.created_at.desc())
     )
     return list(result.scalars().all())
 
 
-async def get_listings_by_category(session: AsyncSession, category: str, region: str | None = None) -> list[Listing]:
+async def get_listings_by_category(session: AsyncSession, category: str, viloyat: str | None = None) -> list[Listing]:
     query = select(Listing).where(
         Listing.category == category,
-        Listing.status == ListingStatus.APPROVED,
+        Listing.status == ListingStatusEnum.ACTIVE,
     )
-    if region:
-        query = query.where(Listing.region == region)
+    if viloyat:
+        query = query.where(Listing.viloyat == viloyat)
     result = await session.execute(query.order_by(Listing.created_at.desc()))
     return list(result.scalars().all())
 
 
-async def approve_listing(session: AsyncSession, listing_id: int) -> Listing | None:
+async def approve_listing(session: AsyncSession, listing_id) -> Listing | None:
     result = await session.execute(select(Listing).where(Listing.id == listing_id))
     listing = result.scalar_one_or_none()
     if listing:
-        listing.status = ListingStatus.APPROVED
+        listing.status = ListingStatusEnum.ACTIVE
         await session.commit()
     return listing
 
 
-async def reject_listing(session: AsyncSession, listing_id: int, reason: str) -> Listing | None:
+async def reject_listing(session: AsyncSession, listing_id, reason: str) -> Listing | None:
     result = await session.execute(select(Listing).where(Listing.id == listing_id))
     listing = result.scalar_one_or_none()
     if listing:
-        listing.status = ListingStatus.REJECTED
+        listing.status = ListingStatusEnum.REJECTED
         listing.reject_reason = reason
         await session.commit()
     return listing

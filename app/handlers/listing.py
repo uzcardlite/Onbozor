@@ -102,7 +102,7 @@ async def enter_username(update: Update, context: ContextTypes.DEFAULT_TYPE):
     username = update.message.text.strip()
     if not username.startswith("@"):
         username = f"@{username}"
-    context.user_data["listing"]["contact_username"] = username
+    context.user_data["listing"]["seller_username"] = username
     await update.message.reply_text("📝 E'lon tavsifini yozing:")
     return ListingState.DESCRIPTION
 
@@ -153,7 +153,7 @@ def _format_listing_preview(data: dict) -> str:
         f"📦 Holat: {data['condition']}\n"
         f"💵 Narx: {data['price']:,} so'm\n"
         f"📍 Viloyat: {data['region']}\n"
-        f"📱 Kontakt: {data['contact_username']}\n"
+        f"📱 Kontakt: {data['seller_username']}\n"
         f"📝 Tavsif: {data['description']}\n"
         f"📷 Rasm: {'Bor' if data.get('photo_url') else 'Yo❜q'}\n\n"
         "Tasdiqlaysizmi?"
@@ -185,7 +185,7 @@ async def confirm_listing(update: Update, context: ContextTypes.DEFAULT_TYPE):
             condition=data["condition"],
             price=data["price"],
             region=data["region"],
-            contact_username=data["contact_username"],
+            seller_username=data["seller_username"],
             description=data["description"],
             photo_url=data.get("photo_url"),
         )

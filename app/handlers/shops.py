@@ -69,9 +69,9 @@ async def view_shop(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = (
         f"🏪 {shop.name}\n\n"
         f"📁 Bo'lim: {shop.category}\n"
-        f"📍 Viloyat: {shop.region}\n"
+        f"📍 Viloyat: {shop.viloyat}\n"
         f"📝 {shop.description}\n"
-        f"📱 Kontakt: @{shop.contact_username}\n\n"
+        f"📍 Viloyat: {shop.viloyat or 'Barcha'}\n\n"
         f"📦 Mahsulotlar soni: {len(products)}"
     )
 

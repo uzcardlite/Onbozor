@@ -67,8 +67,8 @@ async def admin_pending_listings(update: Update, context: ContextTypes.DEFAULT_T
             f"📢 E'lon #{listing.id}\n\n"
             f"📁 {listing.category} → {listing.subcategory}\n"
             f"💵 {listing.price:,} so'm\n"
-            f"📍 {listing.region}\n"
-            f"📱 {listing.contact_username}\n"
+            f"📍 {listing.viloyat}\n"
+            f"📱 {listing.seller_username}\n"
             f"📝 {listing.description}\n"
         )
         await update.message.reply_text(text, reply_markup=admin_listing_keyboard(listing.id))
@@ -177,7 +177,7 @@ async def broadcast_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     text = context.user_data.pop("broadcast_text")
     async with async_session() as session:
-        result = await session.execute(select(User.telegram_id).where(User.is_blocked == False))
+        result = await session.execute(select(User.tg_id).where(User.is_blocked == False))
         user_ids = result.scalars().all()
 
     sent = 0
