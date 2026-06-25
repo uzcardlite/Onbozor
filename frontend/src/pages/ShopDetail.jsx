@@ -6,12 +6,17 @@ import { ListSkeleton } from '../components/LoadingSkeleton'
 import { shopsAPI, favouritesAPI } from '../api/endpoints'
 import { useTelegram } from '../hooks/useTelegram'
 
+const SECTION_LABEL = {
+  uyjoy: '🏠 Uy-joy', texnika: '📱 Texnika', avto: '🚗 Avtomobil',
+  moto: '🏍 Moto', kiyim: '👕 Kiyim',
+}
+
 export default function ShopDetail() {
   const { id } = useParams()
   const { haptic } = useTelegram()
   const qc = useQueryClient()
 
-  const { data: shop, isLoading } = useQuery({
+  const { data: shop, isLoading, isError, refetch } = useQuery({
     queryKey: ['shop', id],
     queryFn: () => shopsAPI.get(id).then((r) => r.data),
   })
@@ -20,46 +25,102 @@ export default function ShopDetail() {
     mutationFn: () => favouritesAPI.toggleShop(id),
     onSuccess: (res) => {
       haptic('notification', 'success')
-      toast.success(res.data.status === 'added' ? 'Kuzatuvga olindi' : 'Kuzatuvdan chiqarildi')
+      const msg = res.data?.status === 'removed' ? 'Kuzatuvdan chiqarildi' : 'Kuzatuvga olindi'
+      toast.success(msg)
       qc.invalidateQueries({ queryKey: ['favourites'] })
     },
+    onError: () => toast.error("Xatolik yuz berdi"),
   })
 
-  if (isLoading) return <div className="p-4 max-w-app mx-auto"><ListSkeleton /></div>
-  if (!shop) return <div className="p-4 text-center text-tg-muted">Do'kon topilmadi</div>
+  if (isLoading) {
+    return (
+      <div className="p-4 max-w-app mx-auto">
+        <div className="bg-tg-card rounded-2xl h-24 animate-pulse mb-4" />
+        <ListSkeleton count={4} />
+      </div>
+    )
+  }
+
+  if (isError || !shop) {
+    return (
+      <div className="p-4 text-center py-16 max-w-app mx-auto">
+        <p className="text-3xl mb-3">😔</p>
+        <p className="text-sm text-tg-muted mb-4">Do'kon topilmadi</p>
+        {isError && <button onClick={() => refetch()} className="text-xs text-tg-accent">Qayta yuklash</button>}
+      </div>
+    )
+  }
+
+  const listings = shop.listings || []
 
   return (
     <div className="pb-20 max-w-app mx-auto">
-      <div className="bg-tg-header p-5 flex items-center gap-4">
-        <div className="w-16 h-16 rounded-2xl bg-tg-card flex items-center justify-center text-3xl overflow-hidden shrink-0">
-          {shop.icon_url ? <img src={shop.icon_url} alt="" className="w-full h-full object-cover" /> : '🏪'}
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <h1 className="text-lg font-bold truncate">{shop.name}</h1>
-            {shop.is_verified && <span className="text-tg-accent">✓</span>}
+      <div className="bg-tg-header p-5">
+        <div className="flex items-center gap-4 mb-4">
+          <div className="w-16 h-16 rounded-2xl bg-tg-card flex items-center justify-center text-3xl overflow-hidden shrink-0">
+            {shop.icon_url ? <img src={shop.icon_url} alt="" className="w-full h-full object-cover" /> : '🏪'}
           </div>
-          <p className="text-xs text-tg-muted mt-0.5">📍 {shop.viloyat || 'Barcha viloyatlar'}</p>
-          <p className="text-xs text-tg-muted">📦 {shop.listings?.length || 0} ta mahsulot</p>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg font-bold truncate">{shop.name}</h1>
+              {shop.is_verified && <span className="text-tg-accent text-sm">✓</span>}
+            </div>
+            <p className="text-xs text-tg-muted mt-0.5">{SECTION_LABEL[shop.category] || shop.category}</p>
+          </div>
+        </div>
+
+        <div className="flex gap-3">
+          <div className="flex-1 bg-tg-bg/30 rounded-xl p-2.5 text-center">
+            <p className="text-sm font-bold">{listings.length}</p>
+            <p className="text-[10px] text-tg-muted">Mahsulotlar</p>
+          </div>
+          <div className="flex-1 bg-tg-bg/30 rounded-xl p-2.5 text-center">
+            <p className="text-sm font-bold">📍</p>
+            <p className="text-[10px] text-tg-muted">{shop.viloyat || 'Barcha'}</p>
+          </div>
+          <div className="flex-1 bg-tg-bg/30 rounded-xl p-2.5 text-center">
+            <p className="text-sm font-bold">{shop.is_active ? '🟢' : '🔴'}</p>
+            <p className="text-[10px] text-tg-muted">{shop.is_active ? 'Faol' : 'Nofaol'}</p>
+          </div>
         </div>
       </div>
 
       <div className="px-4 pt-4">
         <p className="text-sm text-tg-muted mb-4">{shop.description}</p>
 
-        <button onClick={() => { haptic('impact'); favMutation.mutate() }} className="btn-outline mb-6 text-sm">
-          ❤️ Kuzatish
-        </button>
+        <div className="flex gap-2 mb-6">
+          <button
+            onClick={() => { haptic('impact'); favMutation.mutate() }}
+            disabled={favMutation.isPending}
+            className="btn-outline flex-1 text-sm"
+          >
+            {favMutation.isPending ? '⏳' : '❤️'} Kuzatish
+          </button>
+          <a
+            href={`https://t.me/${shop.owner_username || ''}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => haptic('impact', 'medium')}
+            className="btn-primary flex-1 text-sm text-center"
+          >
+            📱 Bog'lanish
+          </a>
+        </div>
 
-        {shop.listings?.length > 0 ? (
-          <>
-            <h3 className="text-sm font-semibold mb-3">Mahsulotlar</h3>
-            <div className="grid grid-cols-2 gap-3">
-              {shop.listings.map((l) => <ProductCard key={l.id} listing={l} />)}
-            </div>
-          </>
+        <div className="flex justify-between items-center mb-3">
+          <h3 className="text-sm font-semibold">Mahsulotlar</h3>
+          <span className="text-xs text-tg-muted">{listings.length} ta</span>
+        </div>
+
+        {listings.length > 0 ? (
+          <div className="grid grid-cols-2 gap-3">
+            {listings.map((l) => <ProductCard key={l.id} listing={l} />)}
+          </div>
         ) : (
-          <p className="text-sm text-tg-muted text-center py-8">Hozircha mahsulotlar yo'q</p>
+          <div className="text-center py-12">
+            <p className="text-3xl mb-3">📦</p>
+            <p className="text-sm text-tg-muted">Hozircha mahsulotlar yo'q</p>
+          </div>
         )}
       </div>
     </div>
