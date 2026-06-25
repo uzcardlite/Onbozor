@@ -11,7 +11,7 @@ cloudinary.config(
 )
 
 ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp"}
-MAX_SIZE = 5 * 1024 * 1024
+MAX_SIZE = 30 * 1024 * 1024
 
 
 async def upload_image(file: UploadFile) -> dict:
@@ -20,7 +20,7 @@ async def upload_image(file: UploadFile) -> dict:
 
     contents = await file.read()
     if len(contents) > MAX_SIZE:
-        raise HTTPException(status_code=400, detail="Rasm hajmi 5MB dan oshmasligi kerak")
+        raise HTTPException(status_code=400, detail="Rasm hajmi 30MB dan oshmasligi kerak")
 
     result = cloudinary.uploader.upload(
         contents,
