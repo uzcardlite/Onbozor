@@ -39,7 +39,7 @@ const MOCK_USER = {
   ref_code: 'demo123',
   ref_count: 0,
   ref_earnings: 0,
-  is_admin: false,
+  is_admin: true,
   created_at: new Date().toISOString(),
 }
 

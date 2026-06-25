@@ -1,16 +1,18 @@
 import { NavLink } from 'react-router-dom'
 import { useTelegram } from '../hooks/useTelegram'
-
-const tabs = [
-  { to: '/', icon: '🏠', label: 'Bosh sahifa' },
-  { to: '/search', icon: '🔍', label: 'Qidiruv' },
-  { to: '/add-listing', icon: '➕', label: "E'lon" },
-  { to: '/favourites', icon: '❤️', label: 'Sevimli' },
-  { to: '/profile', icon: '👤', label: 'Profil' },
-]
+import { useUserStore } from '../store/useStore'
 
 export default function BottomNav() {
   const { haptic } = useTelegram()
+  const { user } = useUserStore()
+
+  const tabs = [
+    { to: '/', icon: '🏠', label: 'Bosh sahifa' },
+    { to: '/search', icon: '🔍', label: 'Qidiruv' },
+    { to: '/add-listing', icon: '➕', label: "E'lon" },
+    ...(user?.is_admin ? [{ to: '/admin', icon: '🔧', label: 'Admin' }] : [{ to: '/favourites', icon: '❤️', label: 'Sevimli' }]),
+    { to: '/profile', icon: '👤', label: 'Profil' },
+  ]
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-tg-header border-t border-white/5 z-50 max-w-app mx-auto">
