@@ -12,7 +12,7 @@ from app.services.shop_service import approve_shop, reject_shop, count_shops
 from app.services.user_service import get_user
 from app.keyboards.main import admin_menu_keyboard, main_menu_keyboard, admin_listing_keyboard
 from app.states import AdminRejectState, BroadcastState
-from app.constants import ListingStatus, ShopStatus
+from app.models.enums import ListingStatusEnum, PaymentStatusEnum
 from sqlalchemy import select, func
 from app.models.user import User
 
@@ -35,10 +35,10 @@ async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     async with async_session() as session:
         total_users = (await session.execute(select(func.count(User.id)))).scalar()
         total_listings = await count_listings(session)
-        pending_listings = await count_listings(session, ListingStatus.PENDING)
-        approved_listings = await count_listings(session, ListingStatus.APPROVED)
+        pending_listings = await count_listings(session, ListingStatusEnum.PENDING)
+        approved_listings = await count_listings(session, ListingStatusEnum.ACTIVE)
         total_shops = await count_shops(session)
-        active_shops = await count_shops(session, ShopStatus.ACTIVE)
+        active_shops = await count_shops(session, active_only=True)
 
     await update.message.reply_text(
         "📊 Statistika\n\n"
