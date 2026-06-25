@@ -27,23 +27,48 @@ const queryClient = new QueryClient({
   },
 })
 
+const MOCK_USER = {
+  id: 'mock-user-id',
+  tg_id: 0,
+  username: 'demo',
+  full_name: 'Demo User',
+  viloyat: null,
+  phone: null,
+  avatar_url: null,
+  ref_code: 'demo123',
+  ref_count: 0,
+  ref_earnings: 0,
+  is_admin: false,
+  created_at: new Date().toISOString(),
+}
+
 function AuthGate({ children }) {
   const { token, setToken, setUser } = useUserStore()
   const { onboarded } = useAppStore()
-  const { initData, ready, expand } = useTelegram()
+  const { initData, isTelegram, ready, expand } = useTelegram()
 
   useEffect(() => {
-    ready()
-    expand()
+    if (isTelegram) {
+      ready()
+      expand()
+    }
   }, [])
 
   useEffect(() => {
     if (token) return
-    if (!initData) return
-    authAPI.telegram(initData).then((res) => {
-      setToken(res.data.token)
-      setUser(res.data.user)
-    }).catch(() => {})
+
+    if (isTelegram && initData) {
+      authAPI.telegram(initData).then((res) => {
+        setToken(res.data.token)
+        setUser(res.data.user)
+      }).catch(() => {
+        setToken('demo-token')
+        setUser(MOCK_USER)
+      })
+    } else {
+      setToken('demo-token')
+      setUser(MOCK_USER)
+    }
   }, [initData, token])
 
   if (!onboarded) return <Onboarding />

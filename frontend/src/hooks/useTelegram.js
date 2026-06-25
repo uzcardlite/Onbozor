@@ -1,10 +1,14 @@
-import WebApp from '@twa-dev/sdk'
+const isTelegram = typeof window !== 'undefined' && window.Telegram?.WebApp?.initData
+
+let tg = null
+if (isTelegram) {
+  tg = window.Telegram.WebApp
+}
 
 export function useTelegram() {
-  const tg = WebApp
-
   const haptic = (type = 'impact', style = 'light') => {
     try {
+      if (!tg) return
       if (type === 'impact') tg.HapticFeedback.impactOccurred(style)
       else if (type === 'notification') tg.HapticFeedback.notificationOccurred(style)
       else tg.HapticFeedback.selectionChanged()
@@ -13,11 +17,12 @@ export function useTelegram() {
 
   return {
     tg,
-    initData: tg.initData,
-    user: tg.initDataUnsafe?.user,
+    isTelegram: !!isTelegram,
+    initData: tg?.initData || '',
+    user: tg?.initDataUnsafe?.user || null,
     haptic,
-    close: () => tg.close(),
-    expand: () => tg.expand(),
-    ready: () => tg.ready(),
+    close: () => tg?.close(),
+    expand: () => tg?.expand(),
+    ready: () => tg?.ready(),
   }
 }
