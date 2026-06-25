@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
 
     ADMIN_IDS: str = "37453466"
+    CHANNEL_ID: str = "@StyleMarket_uz"
 
     class Config:
         env_file = ".env"
