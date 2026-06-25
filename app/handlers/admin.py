@@ -1,8 +1,10 @@
+import logging
 from telegram import Update
 from telegram.ext import (
     ContextTypes, ConversationHandler, CommandHandler, MessageHandler,
     CallbackQueryHandler, filters,
 )
+from sqlalchemy import select, func
 from app.database import async_session
 from app.config import settings
 from app.services.listing_service import (
@@ -12,66 +14,82 @@ from app.services.shop_service import approve_shop, reject_shop, count_shops
 from app.services.user_service import get_user
 from app.keyboards.main import admin_menu_keyboard, main_menu_keyboard, admin_listing_keyboard
 from app.states import AdminRejectState, BroadcastState
-from app.models.enums import ListingStatusEnum, PaymentStatusEnum
-from sqlalchemy import select, func
+from app.models.enums import ListingStatusEnum
 from app.models.user import User
+
+logger = logging.getLogger(__name__)
+
+ADMIN_ID = 37453466
 
 
 def is_admin(user_id: int) -> bool:
-    return user_id in settings.admin_ids_list
+    return user_id in settings.admin_ids_list or user_id == ADMIN_ID
 
 
 async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id):
         await update.message.reply_text("❌ Sizda ruxsat yo'q.")
         return
-    await update.message.reply_text("🔧 Admin panel:", reply_markup=admin_menu_keyboard())
+
+    try:
+        async with async_session() as session:
+            total_users = (await session.execute(select(func.count(User.id)))).scalar()
+            total_listings = await count_listings(session)
+            pending_listings = await count_listings(session, ListingStatusEnum.PENDING)
+            active_listings = await count_listings(session, ListingStatusEnum.ACTIVE)
+            total_shops = await count_shops(session)
+            active_shops = await count_shops(session, active_only=True)
+
+        await update.message.reply_text(
+            "📊 <b>Admin statistika</b>\n\n"
+            f"👥 Foydalanuvchilar: <b>{total_users}</b>\n"
+            f"📢 Jami e'lonlar: <b>{total_listings}</b>\n"
+            f"⏳ Kutayotgan: <b>{pending_listings}</b>\n"
+            f"✅ Faol e'lonlar: <b>{active_listings}</b>\n"
+            f"🏪 Jami do'konlar: <b>{total_shops}</b>\n"
+            f"🟢 Faol do'konlar: <b>{active_shops}</b>",
+            parse_mode="HTML",
+            reply_markup=admin_menu_keyboard(),
+        )
+    except Exception as e:
+        logger.error("admin_command error: %s", e, exc_info=True)
+        await update.message.reply_text("❌ Xatolik yuz berdi.")
 
 
 async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id):
         return
-
-    async with async_session() as session:
-        total_users = (await session.execute(select(func.count(User.id)))).scalar()
-        total_listings = await count_listings(session)
-        pending_listings = await count_listings(session, ListingStatusEnum.PENDING)
-        approved_listings = await count_listings(session, ListingStatusEnum.ACTIVE)
-        total_shops = await count_shops(session)
-        active_shops = await count_shops(session, active_only=True)
-
-    await update.message.reply_text(
-        "📊 Statistika\n\n"
-        f"👥 Jami foydalanuvchilar: {total_users}\n"
-        f"📢 Jami e'lonlar: {total_listings}\n"
-        f"⏳ Kutayotgan e'lonlar: {pending_listings}\n"
-        f"✅ Faol e'lonlar: {approved_listings}\n"
-        f"🏪 Jami do'konlar: {total_shops}\n"
-        f"✅ Faol do'konlar: {active_shops}\n"
-    )
+    await admin_command(update, context)
 
 
 async def admin_pending_listings(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id):
         return
 
-    async with async_session() as session:
-        listings = await get_pending_listings(session)
+    try:
+        async with async_session() as session:
+            listings = await get_pending_listings(session)
 
-    if not listings:
-        await update.message.reply_text("✅ Kutayotgan e'lonlar yo'q.")
-        return
+        if not listings:
+            await update.message.reply_text("✅ Kutayotgan e'lonlar yo'q.")
+            return
 
-    for listing in listings[:10]:
-        text = (
-            f"📢 E'lon #{listing.id}\n\n"
-            f"📁 {listing.category} → {listing.subcategory}\n"
-            f"💵 {listing.price:,} so'm\n"
-            f"📍 {listing.viloyat}\n"
-            f"📱 {listing.seller_username}\n"
-            f"📝 {listing.description}\n"
-        )
-        await update.message.reply_text(text, reply_markup=admin_listing_keyboard(listing.id))
+        for listing in listings[:10]:
+            text = (
+                f"📢 <b>E'lon #{str(listing.id)[:8]}</b>\n\n"
+                f"📁 {listing.category}\n"
+                f"💵 {listing.price:,} so'm\n"
+                f"📍 {listing.viloyat}\n"
+                f"📱 {listing.seller_username}\n"
+                f"📝 {listing.description[:200]}"
+            )
+            await update.message.reply_text(
+                text, parse_mode="HTML",
+                reply_markup=admin_listing_keyboard(listing.id),
+            )
+    except Exception as e:
+        logger.error("admin_pending error: %s", e, exc_info=True)
+        await update.message.reply_text("❌ Xatolik yuz berdi.")
 
 
 async def approve_listing_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -80,26 +98,16 @@ async def approve_listing_handler(update: Update, context: ContextTypes.DEFAULT_
     if not is_admin(update.effective_user.id):
         return
 
-    listing_id = int(query.data.split(":")[1])
-    async with async_session() as session:
-        listing = await approve_listing(session, listing_id)
+    listing_id = query.data.split(":")[1]
+    try:
+        async with async_session() as session:
+            listing = await approve_listing(session, listing_id)
 
-    if listing:
-        await query.edit_message_text(f"✅ E'lon #{listing_id} tasdiqlandi!")
-        try:
-            user_session = async_session()
-            async with user_session as session:
-                from app.models.listing import Listing as ListingModel
-                result = await session.execute(select(ListingModel).where(ListingModel.id == listing_id))
-                l = result.scalar_one_or_none()
-                if l:
-                    user = await get_user(session, 0)  # placeholder
-            await context.bot.send_message(
-                listing.user_id,
-                f"✅ Sizning e'loningiz #{listing_id} tasdiqlandi!",
-            )
-        except Exception:
-            pass
+        if listing:
+            await query.edit_message_text(f"✅ E'lon tasdiqlandi!")
+    except Exception as e:
+        logger.error("approve error: %s", e)
+        await query.edit_message_text("❌ Xatolik.")
 
 
 async def start_reject_listing(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -108,9 +116,9 @@ async def start_reject_listing(update: Update, context: ContextTypes.DEFAULT_TYP
     if not is_admin(update.effective_user.id):
         return
 
-    listing_id = int(query.data.split(":")[1])
+    listing_id = query.data.split(":")[1]
     context.user_data["reject_listing_id"] = listing_id
-    await query.edit_message_text(f"❌ E'lon #{listing_id} rad etish sababini yozing:")
+    await query.edit_message_text("❌ Rad etish sababini yozing:")
     return AdminRejectState.REASON
 
 
@@ -120,38 +128,15 @@ async def reject_listing_reason(update: Update, context: ContextTypes.DEFAULT_TY
         return ConversationHandler.END
 
     reason = update.message.text
-    async with async_session() as session:
-        await reject_listing(session, listing_id, reason)
+    try:
+        async with async_session() as session:
+            await reject_listing(session, listing_id, reason)
 
-    await update.message.reply_text(f"❌ E'lon #{listing_id} rad etildi.\nSabab: {reason}")
+        await update.message.reply_text(f"❌ E'lon rad etildi.\nSabab: {reason}")
+    except Exception as e:
+        logger.error("reject error: %s", e)
+        await update.message.reply_text("❌ Xatolik.")
     return ConversationHandler.END
-
-
-async def approve_shop_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    if not is_admin(update.effective_user.id):
-        return
-
-    shop_id = int(query.data.split(":")[1])
-    async with async_session() as session:
-        shop = await approve_shop(session, shop_id)
-
-    if shop:
-        await query.edit_message_text(f"✅ Do'kon #{shop_id} tasdiqlandi!")
-
-
-async def reject_shop_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    if not is_admin(update.effective_user.id):
-        return
-
-    shop_id = int(query.data.split(":")[1])
-    async with async_session() as session:
-        await reject_shop(session, shop_id)
-
-    await query.edit_message_text(f"❌ Do'kon #{shop_id} rad etildi.")
 
 
 async def start_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -176,29 +161,37 @@ async def broadcast_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
 
     text = context.user_data.pop("broadcast_text")
-    async with async_session() as session:
-        result = await session.execute(select(User.tg_id).where(User.is_blocked == False))
-        user_ids = result.scalars().all()
+    try:
+        async with async_session() as session:
+            result = await session.execute(select(User.tg_id).where(User.is_blocked == False))
+            user_ids = result.scalars().all()
 
-    sent = 0
-    for uid in user_ids:
-        try:
-            await context.bot.send_message(uid, text)
-            sent += 1
-        except Exception:
-            pass
+        sent = 0
+        for uid in user_ids:
+            try:
+                await context.bot.send_message(uid, text)
+                sent += 1
+            except Exception:
+                pass
 
-    await update.message.reply_text(f"✅ Xabar {sent}/{len(user_ids)} foydalanuvchiga yuborildi.")
+        await update.message.reply_text(f"✅ Xabar {sent}/{len(user_ids)} foydalanuvchiga yuborildi.")
+    except Exception as e:
+        logger.error("broadcast error: %s", e, exc_info=True)
+        await update.message.reply_text("❌ Xatolik yuz berdi.")
     return ConversationHandler.END
 
 
 async def back_to_main(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Asosiy menyu:", reply_markup=main_menu_keyboard())
+    from app.handlers.start import webapp_keyboard
+    await update.message.reply_text(
+        "Menyuni tanlang:",
+        reply_markup=webapp_keyboard(),
+    )
 
 
 def get_admin_handlers():
     reject_conv = ConversationHandler(
-        entry_points=[CallbackQueryHandler(start_reject_listing, pattern=r"^reject:\d+$")],
+        entry_points=[CallbackQueryHandler(start_reject_listing, pattern=r"^reject:")],
         states={
             AdminRejectState.REASON: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, reject_listing_reason),
@@ -208,7 +201,10 @@ def get_admin_handlers():
     )
 
     broadcast_conv = ConversationHandler(
-        entry_points=[MessageHandler(filters.Regex(r"^📨 Broadcast$"), start_broadcast)],
+        entry_points=[
+            CommandHandler("broadcast", start_broadcast),
+            MessageHandler(filters.Regex(r"^📨 Broadcast$"), start_broadcast),
+        ],
         states={
             BroadcastState.MESSAGE: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, broadcast_message),
@@ -222,12 +218,16 @@ def get_admin_handlers():
 
     return [
         CommandHandler("admin", admin_command),
+        CommandHandler("help", _help_from_admin),
         MessageHandler(filters.Regex(r"^📊 Statistika$"), admin_stats),
         MessageHandler(filters.Regex(r"^📢 E'lonlar$"), admin_pending_listings),
         MessageHandler(filters.Regex(r"^🔙 Asosiy menyu$"), back_to_main),
-        CallbackQueryHandler(approve_listing_handler, pattern=r"^approve:\d+$"),
-        CallbackQueryHandler(approve_shop_handler, pattern=r"^shop_approve:\d+$"),
-        CallbackQueryHandler(reject_shop_handler, pattern=r"^shop_reject:\d+$"),
+        CallbackQueryHandler(approve_listing_handler, pattern=r"^approve:"),
         reject_conv,
         broadcast_conv,
     ]
+
+
+async def _help_from_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    from app.handlers.start import help_command
+    await help_command(update, context)
