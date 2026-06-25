@@ -45,6 +45,20 @@ export const notificationsAPI = {
   unreadCount: () => api.get('/notifications/unread-count'),
 }
 
+export const adminAPI = {
+  stats: () => api.get('/admin/stats'),
+  users: (params) => api.get('/admin/users', { params }),
+  blockUser: (id) => api.post(`/admin/users/${id}/block`),
+  unblockUser: (id) => api.post(`/admin/users/${id}/unblock`),
+  listings: (params) => api.get('/admin/listings', { params }),
+  approveListing: (id) => api.post(`/admin/listings/${id}/approve`),
+  rejectListing: (id, reason) => api.post(`/admin/listings/${id}/reject`, { reason }),
+  shops: (params) => api.get('/admin/shops', { params }),
+  approveShop: (id) => api.post(`/admin/shops/${id}/approve`),
+  rejectShop: (id) => api.post(`/admin/shops/${id}/reject`),
+  broadcast: (data) => api.post('/admin/broadcast', data),
+}
+
 export const uploadAPI = {
   image: (file) => {
     const form = new FormData()
