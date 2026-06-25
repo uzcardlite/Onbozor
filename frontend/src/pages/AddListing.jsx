@@ -37,12 +37,13 @@ export default function AddListing() {
   })
   const [previews, setPreviews] = useState([])
   const [uploading, setUploading] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+  const [error, setError] = useState(null)
   const fileRef = useRef()
   const navigate = useNavigate()
   const { haptic } = useTelegram()
 
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }))
-
   const next = () => { haptic('impact'); setStep((s) => s + 1) }
   const back = () => { haptic('impact', 'light'); setStep((s) => s - 1) }
 
@@ -50,31 +51,40 @@ export default function AddListing() {
     const files = Array.from(e.target.files)
     if (!files.length) return
     setUploading(true)
-    const urls = []
-    const prevs = []
-    for (const file of files.slice(0, 5)) {
-      prevs.push(URL.createObjectURL(file))
+    for (const file of files.slice(0, 5 - previews.length)) {
+      setPreviews((p) => [...p, URL.createObjectURL(file)])
       try {
         const res = await uploadAPI.image(file)
-        urls.push(res.data.url)
-      } catch { toast.error("Rasm yuklashda xatolik") }
+        set('image_urls', [...form.image_urls, res.data.url])
+      } catch (err) {
+        toast.error("Rasm yuklashda xatolik")
+      }
     }
-    setPreviews((p) => [...p, ...prevs])
-    set('image_urls', [...form.image_urls, ...urls])
     setUploading(false)
+  }
+
+  const removeImage = (index) => {
+    haptic('impact', 'light')
+    setPreviews((p) => p.filter((_, i) => i !== index))
+    setForm((p) => ({ ...p, image_urls: p.image_urls.filter((_, i) => i !== index) }))
   }
 
   const mutation = useMutation({
     mutationFn: (data) => listingsAPI.create(data),
     onSuccess: () => {
       haptic('notification', 'success')
-      toast.success("E'lon yuborildi! Admin tasdiqlashini kuting.")
-      navigate('/')
+      setSubmitted(true)
     },
-    onError: () => toast.error("Xatolik yuz berdi"),
+    onError: (err) => {
+      haptic('notification', 'error')
+      const detail = err.response?.data?.detail || err.response?.data?.error || "Xatolik yuz berdi"
+      setError(typeof detail === 'string' ? detail : JSON.stringify(detail))
+      toast.error("E'lon yuborishda xatolik")
+    },
   })
 
   const submit = () => {
+    setError(null)
     mutation.mutate({
       section: form.section,
       category: form.category,
@@ -91,6 +101,30 @@ export default function AddListing() {
 
   const formatPrice = (n) => n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
 
+  if (submitted) {
+    return (
+      <div className="min-h-screen bg-tg-bg flex items-center justify-center px-6 max-w-app mx-auto">
+        <div className="text-center w-full">
+          <div className="text-6xl mb-4">✅</div>
+          <h1 className="text-2xl font-bold mb-2">E'loningiz qabul qilindi!</h1>
+          <p className="text-sm text-tg-muted mb-8">
+            Admin tasdiqlashini kuting. Tasdiqlangandan keyin e'loningiz barchaga ko'rinadi.
+          </p>
+          <button onClick={() => navigate('/')} className="btn-primary mb-3">
+            🏠 Bosh sahifaga
+          </button>
+          <button onClick={() => { setSubmitted(false); setStep(0); setForm({
+            section: '', category: '', payment_type: '', condition: '',
+            price: '', viloyat: '', seller_username: '', description: '',
+            negotiable: false, image_urls: [],
+          }); setPreviews([]) }} className="btn-outline">
+            📢 Yana e'lon berish
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   const renderStep = () => {
     switch (step) {
       case 0:
@@ -100,7 +134,7 @@ export default function AddListing() {
             <div className="space-y-2">
               {SECTIONS.map((s) => (
                 <button key={s.value} onClick={() => { set('section', s.value); next() }}
-                  className="w-full flex items-center gap-3 bg-tg-card rounded-xl p-4 transition active:scale-[0.98]">
+                  className={`w-full flex items-center gap-3 rounded-xl p-4 transition active:scale-[0.98] ${form.section === s.value ? 'bg-tg-accent text-white' : 'bg-tg-card'}`}>
                   <span className="text-2xl">{s.emoji}</span>
                   <span className="font-medium">{s.label}</span>
                 </button>
@@ -116,7 +150,7 @@ export default function AddListing() {
             <div className="space-y-2">
               {(SUBCATS[form.section] || []).map((c) => (
                 <button key={c} onClick={() => { set('category', c); next() }}
-                  className="w-full bg-tg-card rounded-xl p-4 text-left transition active:scale-[0.98] font-medium">
+                  className={`w-full rounded-xl p-4 text-left transition active:scale-[0.98] font-medium ${form.category === c ? 'bg-tg-accent text-white' : 'bg-tg-card'}`}>
                   {c}
                 </button>
               ))}
@@ -132,7 +166,7 @@ export default function AddListing() {
             <div className="space-y-2">
               {[['naqd', '💵 Naqd'], ['nasiya', '💳 Nasiya'], ['ikkalasi', '💵💳 Ikkalasi']].map(([v, l]) => (
                 <button key={v} onClick={() => { set('payment_type', v); next() }}
-                  className="w-full bg-tg-card rounded-xl p-4 text-left transition active:scale-[0.98] font-medium">
+                  className={`w-full rounded-xl p-4 text-left transition active:scale-[0.98] font-medium ${form.payment_type === v ? 'bg-tg-accent text-white' : 'bg-tg-card'}`}>
                   {l}
                 </button>
               ))}
@@ -153,14 +187,16 @@ export default function AddListing() {
                 </button>
               ))}
             </div>
-            <input type="number" placeholder="Narx (so'm)" value={form.price}
+            <input type="number" inputMode="numeric" placeholder="Narx (so'm)" value={form.price}
               onChange={(e) => set('price', e.target.value)} className="input-field mb-3" />
+            {form.price && <p className="text-xs text-tg-accent mb-3">{formatPrice(form.price)} so'm</p>}
             <label className="flex items-center gap-2 text-sm text-tg-muted mb-4">
               <input type="checkbox" checked={form.negotiable} onChange={(e) => set('negotiable', e.target.checked)}
                 className="w-4 h-4 accent-tg-accent" />
               Kelishiladi
             </label>
-            <button onClick={next} disabled={!form.condition || !form.price} className={`btn-primary ${!form.condition || !form.price ? 'opacity-50' : ''}`}>Keyingi</button>
+            <button onClick={next} disabled={!form.condition || !form.price}
+              className={`btn-primary ${!form.condition || !form.price ? 'opacity-50' : ''}`}>Keyingi</button>
             <button onClick={back} className="mt-3 text-xs text-tg-muted block mx-auto">← Orqaga</button>
           </div>
         )
@@ -188,7 +224,8 @@ export default function AddListing() {
             <input placeholder="@username" value={form.seller_username}
               onChange={(e) => set('seller_username', e.target.value)} className="input-field mb-3" />
             <textarea placeholder="E'lon tavsifi (kamida 10 belgi)" rows={4} value={form.description}
-              onChange={(e) => set('description', e.target.value)} className="input-field mb-4 resize-none" />
+              onChange={(e) => set('description', e.target.value)} className="input-field mb-2 resize-none" />
+            <p className="text-[11px] text-tg-muted mb-4">{form.description.length}/10 belgi</p>
             <button onClick={next} disabled={!form.seller_username || form.description.length < 10}
               className={`btn-primary ${!form.seller_username || form.description.length < 10 ? 'opacity-50' : ''}`}>Keyingi</button>
             <button onClick={back} className="mt-3 text-xs text-tg-muted block mx-auto">← Orqaga</button>
@@ -201,19 +238,23 @@ export default function AddListing() {
             <h2 className="text-lg font-semibold mb-4">📷 Rasmlar</h2>
             <div className="grid grid-cols-3 gap-2 mb-4">
               {previews.map((p, i) => (
-                <div key={i} className="aspect-square rounded-xl overflow-hidden">
+                <div key={i} className="aspect-square rounded-xl overflow-hidden relative">
                   <img src={p} alt="" className="w-full h-full object-cover" />
+                  <button onClick={() => removeImage(i)}
+                    className="absolute top-1 right-1 w-6 h-6 bg-black/60 rounded-full text-xs text-white flex items-center justify-center">✕</button>
                 </div>
               ))}
               {previews.length < 5 && (
-                <button onClick={() => fileRef.current?.click()}
+                <button onClick={() => fileRef.current?.click()} disabled={uploading}
                   className="aspect-square rounded-xl bg-tg-card flex items-center justify-center text-2xl text-tg-muted border-2 border-dashed border-tg-muted/20">
-                  {uploading ? '⏳' : '+'}
+                  {uploading ? <span className="animate-spin">⏳</span> : '+'}
                 </button>
               )}
             </div>
-            <input ref={fileRef} type="file" accept="image/*" multiple onChange={handleFiles} className="hidden" />
-            <p className="text-xs text-tg-muted mb-4 text-center">Max 5 ta rasm (5MB gacha)</p>
+            <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={handleFiles} className="hidden" />
+            <p className="text-xs text-tg-muted mb-4 text-center">
+              {previews.length}/5 rasm · JPG, PNG, WEBP · max 5MB
+            </p>
             <button onClick={next} className="btn-primary">Keyingi</button>
             <button onClick={back} className="mt-3 text-xs text-tg-muted block mx-auto">← Orqaga</button>
           </div>
@@ -223,22 +264,42 @@ export default function AddListing() {
         return (
           <div>
             <h2 className="text-lg font-semibold mb-4">📋 Tasdiqlash</h2>
-            <div className="bg-tg-card rounded-xl p-4 space-y-2 text-sm mb-6">
-              <p>📁 <span className="text-tg-muted">Bo'lim:</span> {form.section}</p>
-              <p>📂 <span className="text-tg-muted">Kategoriya:</span> {form.category}</p>
-              <p>💰 <span className="text-tg-muted">To'lov:</span> {form.payment_type}</p>
-              <p>📦 <span className="text-tg-muted">Holat:</span> {form.condition}</p>
-              <p>💵 <span className="text-tg-muted">Narx:</span> {formatPrice(form.price)} so'm{form.negotiable ? ' (kelishiladi)' : ''}</p>
-              <p>📍 <span className="text-tg-muted">Viloyat:</span> {form.viloyat}</p>
-              <p>📱 <span className="text-tg-muted">Kontakt:</span> {form.seller_username}</p>
-              <p>📝 <span className="text-tg-muted">Tavsif:</span> {form.description}</p>
-              <p>📷 <span className="text-tg-muted">Rasmlar:</span> {form.image_urls.length} ta</p>
+            <div className="bg-tg-card rounded-xl p-4 space-y-2.5 text-sm mb-4">
+              <div className="flex justify-between"><span className="text-tg-muted">Bo'lim</span><span>{SECTIONS.find(s => s.value === form.section)?.label}</span></div>
+              <div className="flex justify-between"><span className="text-tg-muted">Kategoriya</span><span>{form.category}</span></div>
+              <div className="flex justify-between"><span className="text-tg-muted">To'lov</span><span>{form.payment_type}</span></div>
+              <div className="flex justify-between"><span className="text-tg-muted">Holat</span><span>{form.condition === 'yangi' ? '🆕 Yangi' : '♻️ Ishlatilgan'}</span></div>
+              <div className="flex justify-between"><span className="text-tg-muted">Narx</span><span className="text-tg-accent font-bold">{formatPrice(form.price)} so'm</span></div>
+              {form.negotiable && <div className="flex justify-between"><span className="text-tg-muted">Kelishiladi</span><span>✅</span></div>}
+              <div className="flex justify-between"><span className="text-tg-muted">Viloyat</span><span>📍 {form.viloyat}</span></div>
+              <div className="flex justify-between"><span className="text-tg-muted">Kontakt</span><span>{form.seller_username}</span></div>
+              <div className="flex justify-between"><span className="text-tg-muted">Rasmlar</span><span>📷 {form.image_urls.length} ta</span></div>
             </div>
+            <p className="text-xs text-tg-muted mb-2 px-1">{form.description}</p>
+
+            {previews.length > 0 && (
+              <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
+                {previews.map((p, i) => (
+                  <img key={i} src={p} alt="" className="w-16 h-16 rounded-lg object-cover shrink-0" />
+                ))}
+              </div>
+            )}
+
+            {error && (
+              <div className="bg-tg-red/10 border border-tg-red/20 rounded-xl p-3 mb-4">
+                <p className="text-xs text-tg-red">{error}</p>
+              </div>
+            )}
+
             <button onClick={submit} disabled={mutation.isPending}
               className={`btn-primary ${mutation.isPending ? 'opacity-50' : ''}`}>
-              {mutation.isPending ? "Yuborilmoqda..." : "✅ Yuborish"}
+              {mutation.isPending ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="animate-spin">⏳</span> Yuborilmoqda...
+                </span>
+              ) : "✅ Yuborish"}
             </button>
-            <button onClick={back} className="mt-3 text-xs text-tg-muted block mx-auto">← Orqaga</button>
+            <button onClick={back} disabled={mutation.isPending} className="mt-3 text-xs text-tg-muted block mx-auto">← Orqaga</button>
           </div>
         )
     }
