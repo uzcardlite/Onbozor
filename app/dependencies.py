@@ -43,6 +43,6 @@ async def get_current_user(
 
 
 async def get_admin_user(user: User = Depends(get_current_user)) -> User:
-    if not user.is_admin:
+    if user.tg_id not in settings.admin_ids_list:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin huquqi kerak")
     return user

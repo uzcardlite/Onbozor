@@ -30,9 +30,9 @@ const queryClient = new QueryClient({
 
 const MOCK_USER = {
   id: 'mock-user-id',
-  tg_id: 0,
-  username: 'demo',
-  full_name: 'Demo User',
+  tg_id: 37453466,
+  username: 'admin',
+  full_name: 'Admin',
   viloyat: null,
   phone: null,
   avatar_url: null,

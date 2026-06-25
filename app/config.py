@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     WEBHOOK_URL: str = ""
     ENVIRONMENT: str = "development"
 
-    ADMIN_IDS: str = ""
+    ADMIN_IDS: str = "37453466"
 
     class Config:
         env_file = ".env"
