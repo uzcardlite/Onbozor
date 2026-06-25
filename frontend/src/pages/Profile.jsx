@@ -1,11 +1,10 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { listingsAPI, shopsAPI } from '../api/endpoints'
-import { useUserStore } from '../store/useStore'
+import { useUserStore, useAppStore } from '../store/useStore'
 import { useTelegram } from '../hooks/useTelegram'
-import api from '../api/client'
 
 const REGIONS = [
   "Toshkent", "Samarqand", "Buxoro", "Andijon", "Farg'ona",
@@ -20,33 +19,39 @@ const STATUS_BADGE = {
   deleted: { label: "O'chirildi", cls: 'bg-tg-muted/20 text-tg-muted' },
 }
 
+function formatPrice(n) {
+  return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+}
+
 export default function Profile() {
-  const { user, setUser } = useUserStore()
+  const { user, setUser, token } = useUserStore()
+  const { setRegion } = useAppStore()
   const { haptic } = useTelegram()
-  const qc = useQueryClient()
   const [regionOpen, setRegionOpen] = useState(false)
+
+  const isDemo = !token || token === 'demo-token'
 
   const { data: listings, isLoading: loadingListings } = useQuery({
     queryKey: ['my-listings'],
     queryFn: () => listingsAPI.my().then((r) => r.data),
+    enabled: !isDemo,
+    retry: false,
   })
 
   const { data: shops } = useQuery({
     queryKey: ['my-shops'],
     queryFn: () => shopsAPI.my().then((r) => r.data),
+    enabled: !isDemo,
+    retry: false,
   })
 
-  const regionMutation = useMutation({
-    mutationFn: (viloyat) => api.put('/auth/profile', { viloyat }),
-    onSuccess: (res) => {
-      setUser(res.data)
-      haptic('notification', 'success')
-      toast.success('Viloyat yangilandi')
-      setRegionOpen(false)
-    },
-  })
-
-  const formatPrice = (n) => n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+  const changeRegion = (viloyat) => {
+    haptic('selection')
+    setRegion(viloyat)
+    setUser({ ...user, viloyat })
+    setRegionOpen(false)
+    toast.success(`Viloyat: ${viloyat}`)
+  }
 
   return (
     <div className="pb-20 px-4 pt-4 max-w-app mx-auto">
@@ -59,10 +64,19 @@ export default function Profile() {
           )}
         </div>
         <div>
-          <h1 className="text-lg font-bold">{user?.full_name}</h1>
+          <h1 className="text-lg font-bold">{user?.full_name || 'Foydalanuvchi'}</h1>
           {user?.username && <p className="text-xs text-tg-muted">@{user.username}</p>}
+          {isDemo && <p className="text-[10px] text-tg-yellow mt-0.5">Demo rejim</p>}
         </div>
       </div>
+
+      {isDemo && (
+        <div className="bg-tg-yellow/10 border border-tg-yellow/20 rounded-xl p-3 mb-4">
+          <p className="text-xs text-tg-yellow">
+            Telegram orqali kiring — barcha imkoniyatlar ochiladi
+          </p>
+        </div>
+      )}
 
       <div className="bg-tg-card rounded-2xl p-4 mb-4">
         <div className="flex justify-between items-center">
@@ -83,7 +97,7 @@ export default function Profile() {
             {REGIONS.map((r) => (
               <button
                 key={r}
-                onClick={() => { haptic('selection'); regionMutation.mutate(r) }}
+                onClick={() => changeRegion(r)}
                 className={`py-2 rounded-lg text-xs font-medium transition ${user?.viloyat === r ? 'bg-tg-accent text-white' : 'bg-tg-bg text-tg-muted'}`}
               >
                 {r}
@@ -93,18 +107,18 @@ export default function Profile() {
         )}
       </div>
 
-      <div className="flex gap-3 mb-6">
-        <Link to="/referral" className="flex-1 bg-tg-card rounded-2xl p-4 text-center transition active:scale-[0.98]">
+      <div className="grid grid-cols-3 gap-3 mb-6">
+        <Link to="/referral" className="bg-tg-card rounded-2xl p-4 text-center transition active:scale-[0.98]">
           <p className="text-lg">👥</p>
           <p className="text-xs text-tg-muted mt-1">Referral</p>
         </Link>
-        <Link to="/favourites" className="flex-1 bg-tg-card rounded-2xl p-4 text-center transition active:scale-[0.98]">
+        <Link to="/favourites" className="bg-tg-card rounded-2xl p-4 text-center transition active:scale-[0.98]">
           <p className="text-lg">❤️</p>
           <p className="text-xs text-tg-muted mt-1">Sevimlilar</p>
         </Link>
         <Link
           to={shops?.length ? `/shop/${shops[0].id}` : '/open-shop'}
-          className="flex-1 bg-tg-card rounded-2xl p-4 text-center transition active:scale-[0.98]"
+          className="bg-tg-card rounded-2xl p-4 text-center transition active:scale-[0.98]"
         >
           <p className="text-lg">🏪</p>
           <p className="text-xs text-tg-muted mt-1">{shops?.length ? "Do'konim" : "Do'kon ochish"}</p>
@@ -117,7 +131,13 @@ export default function Profile() {
           <Link to="/add-listing" className="text-xs text-tg-accent">+ Yangi</Link>
         </div>
 
-        {loadingListings ? (
+        {isDemo ? (
+          <div className="text-center py-8">
+            <p className="text-3xl mb-3">📢</p>
+            <p className="text-sm text-tg-muted mb-2">Telegram orqali kiring</p>
+            <Link to="/add-listing" className="text-sm text-tg-accent">E'lon berish →</Link>
+          </div>
+        ) : loadingListings ? (
           <div className="space-y-3 animate-pulse">
             {Array.from({ length: 3 }, (_, i) => <div key={i} className="bg-tg-card rounded-xl h-16" />)}
           </div>
