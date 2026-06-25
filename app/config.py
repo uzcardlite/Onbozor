@@ -2,8 +2,8 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    BOT_TOKEN: str
-    DATABASE_URL: str
+    BOT_TOKEN: str = ""
+    DATABASE_URL: str = "postgresql+asyncpg://localhost/onbozor"
 
     JWT_SECRET: str = "change-me-in-production"
     JWT_ALGORITHM: str = "HS256"
