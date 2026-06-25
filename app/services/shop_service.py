@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.shop import Shop
+from app.models.listing import Listing
 
 
 async def create_shop(session: AsyncSession, **kwargs) -> Shop:
@@ -24,6 +25,13 @@ async def get_shops_by_category(session: AsyncSession, category: str, viloyat: s
 
 async def get_shop(session: AsyncSession, shop_id) -> Shop | None:
     return await session.get(Shop, shop_id)
+
+
+async def get_shop_products(session: AsyncSession, shop_id) -> list[Listing]:
+    result = await session.execute(
+        select(Listing).where(Listing.shop_id == shop_id).order_by(Listing.created_at.desc())
+    )
+    return list(result.scalars().all())
 
 
 async def approve_shop(session: AsyncSession, shop_id) -> Shop | None:
