@@ -1,8 +1,15 @@
-from telegram import Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import (
     ContextTypes, CommandHandler, ConversationHandler,
     CallbackQueryHandler,
 )
+
+WEB_APP_URL = "https://onbozor.vercel.app"
+
+def webapp_keyboard():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🛍 OnBozor ga o'tish", web_app=WebAppInfo(url=WEB_APP_URL))]
+    ])
 from app.database import async_session
 from app.services.user_service import get_or_create_user, get_user, process_referral
 from app.keyboards.main import main_menu_keyboard, regions_keyboard
@@ -36,16 +43,17 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await update.message.reply_text(
             f"👋 Salom, {update.effective_user.first_name}!\n\n"
-            "OnBozor — O'zbekiston bozori. Quyidagi menyudan foydalaning:",
-            reply_markup=main_menu_keyboard(),
+            "OnBozor — O'zbekiston bozori.\n"
+            "Quyidagi tugmani bosib bozorga kiring:",
+            reply_markup=webapp_keyboard(),
         )
         return ConversationHandler.END
     except Exception as e:
         logger.error("start_command error: %s", e, exc_info=True)
         await update.message.reply_text(
             "👋 OnBozor ga xush kelibsiz!\n\n"
-            "Quyidagi menyudan foydalaning:",
-            reply_markup=main_menu_keyboard(),
+            "Quyidagi tugmani bosib bozorga kiring:",
+            reply_markup=webapp_keyboard(),
         )
         return ConversationHandler.END
 
@@ -68,7 +76,10 @@ async def select_region(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"✅ Viloyat saqlandi: {region}\n\n"
         "OnBozor ga xush kelibsiz! Quyidagi menyudan foydalaning:",
     )
-    await query.message.reply_text("Menyuni tanlang:", reply_markup=main_menu_keyboard())
+    await query.message.reply_text(
+        "Quyidagi tugmani bosib bozorga kiring:",
+        reply_markup=webapp_keyboard(),
+    )
     return ConversationHandler.END
 
 
