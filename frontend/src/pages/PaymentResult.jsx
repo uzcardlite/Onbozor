@@ -120,12 +120,19 @@ export default function PaymentResult() {
         {status === 'success' && (
           <>
             <div className="text-6xl mb-4">🎉</div>
-            <h1 className="text-2xl font-bold mb-2 text-tg-green">Muvaffaqiyatli!</h1>
-            <p className="text-sm text-tg-muted mb-8">
-              To'lov qabul qilindi. Do'koningiz 30 kunga faollashtirildi!
+            <h1 className="text-2xl font-bold mb-2 text-tg-green">Do'koningiz faollashdi!</h1>
+            <p className="text-sm text-tg-muted mb-2">
+              To'lov muvaffaqiyatli qabul qilindi.
             </p>
-            <button onClick={() => navigate('/profile')} className="btn-primary">
-              Profilga o'tish
+            <div className="bg-tg-card rounded-xl p-4 mb-8 text-sm">
+              <div className="flex justify-between mb-2"><span className="text-tg-muted">Obuna</span><span className="text-tg-green font-medium">30 kun</span></div>
+              <div className="flex justify-between"><span className="text-tg-muted">Holat</span><span className="text-tg-green font-medium">✅ Faol</span></div>
+            </div>
+            <button onClick={() => navigate('/profile')} className="btn-primary mb-3">
+              🏪 Do'konimga o'tish
+            </button>
+            <button onClick={() => navigate('/add-listing')} className="btn-outline">
+              📢 Mahsulot qo'shish
             </button>
           </>
         )}
