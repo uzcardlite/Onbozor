@@ -24,9 +24,11 @@ if settings.SENTRY_DSN:
         logger.warning("Sentry init failed: %s", e)
 
 
+_start_time = time.time()
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("OnBozor API starting (env=%s, debug=%s)", settings.ENVIRONMENT, settings.DEBUG)
+    logger.info("OnBozor API starting (env=%s)", settings.ENVIRONMENT)
     yield
     logger.info("OnBozor API shutting down")
 
@@ -103,7 +105,12 @@ async def logging_middleware(request: Request, call_next):
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "version": "1.0.0"}
+    return {
+        "status": "ok",
+        "version": "1.0.0",
+        "uptime": int(time.time() - _start_time),
+        "env": settings.ENVIRONMENT,
+    }
 
 
 @app.get("/")
