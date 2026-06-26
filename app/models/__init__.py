@@ -15,6 +15,7 @@ from app.models.review import Review
 from app.models.promotion import Promotion, PromotionTypeEnum
 from app.models.listing_view import ListingView
 from app.models.achievement import Achievement
+from app.models.conversation import Conversation, Message
 
 __all__ = [
     "Base",

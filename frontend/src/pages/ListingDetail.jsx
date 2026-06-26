@@ -94,15 +94,32 @@ export default function ListingDetail() {
         </div>
 
         <div className="flex gap-2 mb-4">
-          <a
-            href={`https://t.me/${listing.seller_username.replace('@', '')}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => haptic('impact', 'medium')}
-            className="btn-primary block text-center flex-1"
-          >
-            📱 Bog'lanish
-          </a>
+          {user && listing.user_id !== user.id ? (
+            <button
+              onClick={async () => {
+                haptic('impact', 'medium')
+                try {
+                  const { messagesAPI } = await import('../api/endpoints')
+                  const res = await messagesAPI.start(listing.id)
+                  window.location.href = `/messages/${res.data.id}`
+                } catch {
+                  window.open(`https://t.me/${listing.seller_username.replace('@', '')}`, '_blank')
+                }
+              }}
+              className="btn-primary flex-1"
+            >
+              💬 Sotuvchiga yozish
+            </button>
+          ) : (
+            <a
+              href={`https://t.me/${listing.seller_username.replace('@', '')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-primary block text-center flex-1"
+            >
+              📱 Bog'lanish
+            </a>
+          )}
           <button
             onClick={() => {
               haptic('impact')

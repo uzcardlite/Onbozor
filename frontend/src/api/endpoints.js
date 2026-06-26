@@ -59,6 +59,15 @@ export const adminAPI = {
   broadcast: (data) => api.post('/admin/broadcast', data),
 }
 
+export const messagesAPI = {
+  conversations: () => api.get('/conversations'),
+  unreadCount: () => api.get('/conversations/unread-count'),
+  start: (listingId) => api.post('/conversations', { listing_id: listingId }),
+  messages: (convId) => api.get(`/conversations/${convId}/messages`),
+  send: (convId, text) => api.post(`/conversations/${convId}/messages`, { text }),
+  markRead: (convId) => api.put(`/conversations/${convId}/read`),
+}
+
 export const gamificationAPI = {
   myStats: () => api.get('/gamification/my-stats'),
   leaderboard: () => api.get('/gamification/leaderboard'),

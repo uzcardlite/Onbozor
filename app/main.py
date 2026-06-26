@@ -136,6 +136,7 @@ _safe_include("app.routers.reviews")
 _safe_include("app.routers.promotions")
 _safe_include("app.routers.analytics")
 _safe_include("app.routers.gamification")
+_safe_include("app.routers.conversations")
 
 
 @app.exception_handler(404)
