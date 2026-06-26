@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import { listingsAPI, shopsAPI, analyticsAPI, gamificationAPI } from '../api/endpoints'
+import { listingsAPI, shopsAPI, analyticsAPI, gamificationAPI, paymentsAPI } from '../api/endpoints'
 import { useUserStore, useAppStore } from '../store/useStore'
 import { useTelegram } from '../hooks/useTelegram'
 
@@ -39,6 +39,12 @@ export default function Profile() {
   const { data: shops } = useQuery({
     queryKey: ['my-shops'],
     queryFn: () => shopsAPI.my().then((r) => r.data),
+    enabled: !isDemo, retry: false,
+  })
+
+  const { data: payments } = useQuery({
+    queryKey: ['my-payments'],
+    queryFn: () => paymentsAPI.my().then((r) => r.data),
     enabled: !isDemo, retry: false,
   })
 
@@ -236,6 +242,33 @@ export default function Profile() {
             </div>
           )}
         </div>
+
+        {!isDemo && payments?.length > 0 && (
+          <div className="mt-6">
+            <h2 className="text-sm font-semibold mb-3">💳 To'lovlar tarixi</h2>
+            <div className="space-y-2">
+              {payments.slice(0, 10).map((p) => {
+                const statusMap = { paid: { label: "To'landi", cls: 'text-tg-green' }, pending: { label: 'Kutilmoqda', cls: 'text-tg-yellow' }, failed: { label: 'Xato', cls: 'text-tg-red' }, cancelled: { label: 'Bekor', cls: 'text-tg-muted' } }
+                const s = statusMap[p.status] || statusMap.pending
+                return (
+                  <div key={p.id} className="card p-3 flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-tg-bg flex items-center justify-center text-lg shrink-0">
+                      {p.type === 'shop' ? '🏪' : p.type === 'promotion' ? '🚀' : '💳'}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium truncate">{p.shop_name || 'Promosiya'}</p>
+                      <p className="text-[10px] text-tg-muted">{new Date(p.created_at).toLocaleDateString('uz')} · {p.method}</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-xs font-bold">{formatPrice(p.amount)} so'm</p>
+                      <p className={`text-[10px] font-medium ${s.cls}`}>{s.label}</p>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

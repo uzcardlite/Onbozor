@@ -37,6 +37,8 @@ export const referralAPI = {
 
 export const paymentsAPI = {
   initiate: (data) => api.post('/payments/initiate', data),
+  status: (id) => api.get(`/payments/status/${id}`),
+  my: () => api.get('/payments/my'),
 }
 
 export const notificationsAPI = {
