@@ -37,7 +37,7 @@ export default function FilterDrawer({ open, onClose, filters, onApply }) {
               <button
                 key={s.value}
                 onClick={() => { haptic('selection'); set('section', local.section === s.value ? null : s.value) }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${local.section === s.value ? 'bg-tg-accent text-white' : 'bg-tg-bg text-tg-muted'}`}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${local.section === s.value ? 'bg-tg-accent text-white' : 'bg-tg-bg text-tg-muted border border-tg-border'}`}
               >
                 {s.label}
               </button>
@@ -60,7 +60,7 @@ export default function FilterDrawer({ open, onClose, filters, onApply }) {
               <button
                 key={r}
                 onClick={() => { haptic('selection'); set('viloyat', local.viloyat === r ? null : r) }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${local.viloyat === r ? 'bg-tg-accent text-white' : 'bg-tg-bg text-tg-muted'}`}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${local.viloyat === r ? 'bg-tg-accent text-white' : 'bg-tg-bg text-tg-muted border border-tg-border'}`}
               >
                 {r}
               </button>
@@ -75,7 +75,7 @@ export default function FilterDrawer({ open, onClose, filters, onApply }) {
               <button
                 key={c}
                 onClick={() => { haptic('selection'); set('condition', local.condition === c ? null : c) }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition flex-1 ${local.condition === c ? 'bg-tg-accent text-white' : 'bg-tg-bg text-tg-muted'}`}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition flex-1 ${local.condition === c ? 'bg-tg-accent text-white' : 'bg-tg-bg text-tg-muted border border-tg-border'}`}
               >
                 {c === 'yangi' ? '🆕 Yangi' : '♻️ Ishlatilgan'}
               </button>
@@ -90,7 +90,7 @@ export default function FilterDrawer({ open, onClose, filters, onApply }) {
               <button
                 key={p}
                 onClick={() => { haptic('selection'); set('payment_type', local.payment_type === p ? null : p) }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition flex-1 ${local.payment_type === p ? 'bg-tg-accent text-white' : 'bg-tg-bg text-tg-muted'}`}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition flex-1 ${local.payment_type === p ? 'bg-tg-accent text-white' : 'bg-tg-bg text-tg-muted border border-tg-border'}`}
               >
                 {p.charAt(0).toUpperCase() + p.slice(1)}
               </button>

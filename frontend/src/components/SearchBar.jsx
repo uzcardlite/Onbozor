@@ -25,9 +25,9 @@ export default function SearchBar({ defaultValue = '', autoFocus = false }) {
         onBlur={() => setFocused(false)}
         autoFocus={autoFocus}
         placeholder="Qidirish..."
-        className={`w-full bg-tg-card rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-tg-muted transition-all ${focused ? 'ring-2 ring-tg-accent' : ''}`}
+        className={`w-full bg-tg-card border rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-tg-muted transition-all duration-200 ${focused ? 'border-tg-accent shadow-lg shadow-tg-accent/10' : 'border-tg-border'}`}
       />
-      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-tg-muted">🔍</span>
+      <span className={`absolute left-3.5 top-1/2 -translate-y-1/2 text-sm transition-colors ${focused ? 'text-tg-accent' : 'text-tg-muted'}`}>🔍</span>
     </form>
   )
 }

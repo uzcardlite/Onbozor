@@ -1,12 +1,18 @@
 export default function StepIndicator({ current, total }) {
+  const percent = ((current + 1) / total) * 100
+
   return (
-    <div className="flex gap-1.5 justify-center mb-6">
-      {Array.from({ length: total }, (_, i) => (
+    <div className="mb-6">
+      <div className="flex justify-between items-center mb-2">
+        <span className="text-xs text-tg-muted">{current + 1}/{total} qadam</span>
+        <span className="text-xs text-tg-accent font-medium">{Math.round(percent)}%</span>
+      </div>
+      <div className="h-1 bg-tg-border rounded-full overflow-hidden">
         <div
-          key={i}
-          className={`h-1 rounded-full transition-all ${i === current ? 'w-6 bg-tg-accent' : i < current ? 'w-3 bg-tg-accent/50' : 'w-3 bg-tg-muted/30'}`}
+          className="h-full bg-tg-accent rounded-full transition-all duration-500 ease-out"
+          style={{ width: `${percent}%` }}
         />
-      ))}
+      </div>
     </div>
   )
 }

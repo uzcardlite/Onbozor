@@ -3,47 +3,44 @@
 @tailwind utilities;
 
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body, #root { height: 100%; background: #212121; color: #fff; font-family: 'Inter', sans-serif; }
+html, body, #root { height: 100%; background: #17212B; color: #fff; font-family: 'Inter', sans-serif; }
 body { overscroll-behavior-y: contain; }
 ::-webkit-scrollbar { display: none; }
 input, textarea, select { outline: none; }
 
 @layer components {
   .btn-primary {
-    @apply w-full py-3 rounded-xl bg-tg-accent text-white font-semibold text-center transition-transform active:scale-[0.97];
+    @apply w-full py-3.5 rounded-lg bg-tg-accent text-white font-semibold text-center text-sm
+    transition-all duration-150 active:scale-[0.97] active:brightness-90;
   }
   .btn-outline {
-    @apply w-full py-3 rounded-xl border border-tg-accent text-tg-accent font-semibold text-center transition-transform active:scale-[0.97];
+    @apply w-full py-3.5 rounded-lg border border-tg-accent text-tg-accent font-semibold text-center text-sm
+    transition-all duration-150 active:scale-[0.97];
+  }
+  .btn-danger {
+    @apply w-full py-3.5 rounded-lg bg-tg-red/10 text-tg-red font-semibold text-center text-sm
+    transition-all duration-150 active:scale-[0.97];
   }
   .card {
-    @apply bg-tg-card rounded-2xl overflow-hidden;
+    @apply bg-tg-card rounded-xl overflow-hidden border border-tg-border/30;
   }
   .input-field {
-    @apply w-full bg-tg-card border border-transparent focus:border-tg-accent rounded-xl px-4 py-3 text-white placeholder-tg-muted transition-colors;
+    @apply w-full bg-tg-card border border-tg-border focus:border-tg-accent rounded-lg px-4 py-3.5
+    text-white text-sm placeholder-tg-muted transition-colors duration-200;
+  }
+  .chip {
+    @apply px-3.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all duration-150 shrink-0;
+  }
+  .chip-active {
+    @apply bg-tg-accent text-white;
+  }
+  .chip-inactive {
+    @apply bg-tg-card text-tg-muted border border-tg-border;
+  }
+  .skeleton {
+    @apply bg-gradient-to-r from-tg-card via-tg-border/30 to-tg-card bg-[length:200%_100%] animate-shimmer rounded-lg;
   }
 }
 
-@keyframes slide-up {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
-}
-.animate-slide-up {
-  animation: slide-up 0.3s ease-out;
-}
-
-@keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-.animate-fade-in {
-  animation: fade-in 0.2s ease-out;
-}
-
-.swiper-pagination-bullet {
-  background: #8d8d8d !important;
-  opacity: 0.5 !important;
-}
-.swiper-pagination-bullet-active {
-  background: #2AABEE !important;
-  opacity: 1 !important;
-}
+.swiper-pagination-bullet { background: #708499 !important; opacity: 0.4 !important; width: 6px !important; height: 6px !important; }
+.swiper-pagination-bullet-active { background: #2AABEE !important; opacity: 1 !important; width: 20px !important; border-radius: 3px !important; }
