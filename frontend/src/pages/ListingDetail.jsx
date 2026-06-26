@@ -1,12 +1,14 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import ImageGallery from '../components/ImageGallery'
 import ProductCard from '../components/ProductCard'
+import PromoteModal from '../components/PromoteModal'
 import { ListSkeleton } from '../components/LoadingSkeleton'
 import { listingsAPI, favouritesAPI } from '../api/endpoints'
 import ReviewSection from '../components/ReviewSection'
+import { useUserStore } from '../store/useStore'
 import { useTelegram } from '../hooks/useTelegram'
 
 function formatPrice(n) {
@@ -16,7 +18,9 @@ function formatPrice(n) {
 export default function ListingDetail() {
   const { id } = useParams()
   const { haptic } = useTelegram()
+  const { user } = useUserStore()
   const qc = useQueryClient()
+  const [promoteOpen, setPromoteOpen] = useState(false)
 
   const { data: listing, isLoading } = useQuery({
     queryKey: ['listing', id],
@@ -126,7 +130,22 @@ export default function ListingDetail() {
           🔗 Havolani nusxalash
         </button>
 
+        {user && listing.user_id === user.id && !listing.is_promoted && (
+          <button onClick={() => { haptic('impact'); setPromoteOpen(true) }} className="btn-outline mb-4 text-sm">
+            🚀 E'lonni kuchaytirish
+          </button>
+        )}
+
+        {listing.is_promoted && (
+          <div className="card p-3 mb-4 flex items-center gap-2">
+            <span className="text-tg-yellow">⭐</span>
+            <span className="text-xs text-tg-yellow font-medium">Promosiya faol</span>
+          </div>
+        )}
+
         <ReviewSection listingId={listing.id} sellerId={listing.user_id} />
+
+        <PromoteModal open={promoteOpen} onClose={() => setPromoteOpen(false)} listingId={listing.id} />
 
         {similar?.length > 0 && (
           <div className="mt-2 mb-4">

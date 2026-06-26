@@ -12,6 +12,7 @@ from app.models.payment import Payment
 from app.models.broadcast import Broadcast
 from app.models.notification import Notification
 from app.models.review import Review
+from app.models.promotion import Promotion, PromotionTypeEnum
 
 __all__ = [
     "Base",
@@ -20,4 +21,5 @@ __all__ = [
     "NotificationTypeEnum",
     "User", "Shop", "Listing", "Favourite",
     "Payment", "Broadcast", "Notification", "Review",
+    "Promotion", "PromotionTypeEnum",
 ]

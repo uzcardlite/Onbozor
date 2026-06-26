@@ -34,6 +34,7 @@ class UserOut(BaseModel):
     ref_count: int
     ref_earnings: int
     is_admin: bool
+    is_verified: bool = False
     created_at: datetime
 
     class Config:
@@ -301,6 +302,29 @@ class SellerRating(BaseModel):
     avg_rating: float
     total_reviews: int
     reviews: list[ReviewOut]
+
+
+# ───────────── Promotion ─────────────
+
+class PromotionInitiate(BaseModel):
+    listing_id: uuid.UUID
+    type: str = Field(pattern=r"^(top|featured|urgent)$")
+    method: str = Field(pattern=r"^(payme|click)$")
+
+
+class PromotionOut(BaseModel):
+    id: uuid.UUID
+    listing_id: uuid.UUID
+    type: str
+    price: int
+    starts_at: datetime
+    expires_at: datetime
+    is_active: bool
+    payment_url: str = ""
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
 
 
 # ───────────── Search ─────────────

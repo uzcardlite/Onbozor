@@ -33,7 +33,9 @@ export default function ProductCard({ listing }) {
             <div className="w-full h-full flex items-center justify-center text-3xl text-tg-muted/40">📷</div>
           )}
           {listing.is_promoted && (
-            <span className="absolute top-2 left-2 bg-tg-yellow text-black text-[9px] font-bold px-2 py-0.5 rounded-md">TOP</span>
+            <span className="absolute top-2 left-2 bg-gradient-to-r from-tg-yellow to-orange-400 text-black text-[9px] font-bold px-2 py-0.5 rounded-md shadow-sm">
+              {listing.promoted_type === 'featured' ? '⭐ Featured' : listing.promoted_type === 'urgent' ? '🔥 Shoshilinch' : '🔝 TOP'}
+            </span>
           )}
           {condBadge && (
             <span className={`absolute bottom-2 left-2 text-[9px] font-bold px-2 py-0.5 rounded-md ${condBadge.cls}`}>{condBadge.text}</span>

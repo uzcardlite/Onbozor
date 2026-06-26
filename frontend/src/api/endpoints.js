@@ -59,6 +59,11 @@ export const adminAPI = {
   broadcast: (data) => api.post('/admin/broadcast', data),
 }
 
+export const promotionsAPI = {
+  initiate: (data) => api.post('/promotions/initiate', data),
+  my: () => api.get('/promotions/my'),
+}
+
 export const reviewsAPI = {
   create: (data) => api.post('/reviews', data),
   byUser: (userId) => api.get(`/reviews/user/${userId}`),

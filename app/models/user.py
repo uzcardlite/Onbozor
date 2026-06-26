@@ -27,6 +27,7 @@ class User(Base, UUIDMixin, TimestampMixin):
     ref_earnings: Mapped[int] = mapped_column(BigInteger, default=0)
     is_blocked: Mapped[bool] = mapped_column(Boolean, default=False)
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
 
     referrer = relationship("User", remote_side="User.id", foreign_keys=[referred_by])
     shops = relationship("Shop", back_populates="owner")

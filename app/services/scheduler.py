@@ -108,12 +108,72 @@ async def delete_expired_listings():
         logger.info("Expired listings deleted: %d", result.rowcount)
 
 
+async def expire_promotions():
+    from app.models.promotion import Promotion
+    now = datetime.now(timezone.utc)
+
+    async with async_session() as session:
+        result = await session.execute(
+            select(Promotion, Listing, User.tg_id)
+            .join(Listing, Promotion.listing_id == Listing.id)
+            .join(User, Promotion.user_id == User.id)
+            .where(Promotion.is_active == True, Promotion.expires_at <= now)
+        )
+        rows = result.all()
+
+        for promo, listing, tg_id in rows:
+            promo.is_active = False
+            listing.is_promoted = False
+            listing.promoted_until = None
+            from app.services.notification import _send
+            WEB_APP = "https://onbozor.vercel.app"
+            await _send(tg_id,
+                f"❌ <b>E'loningiz promosiyasi tugadi</b>\n\n📢 {listing.category}\n\nQayta faollashtiring:",
+                [[{"text": "🚀 Qayta promote", "web_app": {"url": f"{WEB_APP}/listing/{listing.id}"}}]],
+            )
+
+        await session.commit()
+
+    logger.info("Expired promotions: %d", len(rows))
+
+
+async def warn_expiring_promotions():
+    from app.models.promotion import Promotion
+    now = datetime.now(timezone.utc)
+    warn_time = now + timedelta(hours=2)
+
+    async with async_session() as session:
+        result = await session.execute(
+            select(Promotion, Listing, User.tg_id)
+            .join(Listing, Promotion.listing_id == Listing.id)
+            .join(User, Promotion.user_id == User.id)
+            .where(
+                Promotion.is_active == True,
+                Promotion.expires_at <= warn_time,
+                Promotion.expires_at > now,
+            )
+        )
+        rows = result.all()
+
+    for promo, listing, tg_id in rows:
+        from app.services.notification import _send
+        WEB_APP = "https://onbozor.vercel.app"
+        await _send(tg_id,
+            f"⚠️ <b>Promosiya 2 soatda tugaydi!</b>\n\n📢 {listing.category}\n\nDavom ettirish:",
+            [[{"text": "🚀 Davom ettirish", "web_app": {"url": f"{WEB_APP}/listing/{listing.id}"}}]],
+        )
+
+    logger.info("Expiring promotion warnings: %d", len(rows))
+
+
 async def run_daily_tasks():
     logger.info("Running daily scheduled tasks")
     await check_expiring_shops()
     await deactivate_expired_shops()
     await check_expiring_listings()
     await delete_expired_listings()
+    await expire_promotions()
+    await warn_expiring_promotions()
     logger.info("Daily tasks completed")
 
 
