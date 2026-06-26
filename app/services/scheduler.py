@@ -174,7 +174,67 @@ async def run_daily_tasks():
     await delete_expired_listings()
     await expire_promotions()
     await warn_expiring_promotions()
+    await send_daily_admin_report()
+    if datetime.now(timezone.utc).weekday() == 0:
+        await send_weekly_leaderboard()
     logger.info("Daily tasks completed")
+
+
+async def send_daily_admin_report():
+    from app.models.payment import Payment
+    from app.models.enums import PaymentStatusEnum
+    now = datetime.now(timezone.utc)
+    today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    try:
+        async with async_session() as session:
+            new_users = (await session.execute(select(func.count(User.id)).where(User.created_at >= today))).scalar() or 0
+            new_listings = (await session.execute(select(func.count(Listing.id)).where(Listing.created_at >= today))).scalar() or 0
+            revenue = (await session.execute(
+                select(func.coalesce(func.sum(Payment.amount), 0)).where(Payment.status == PaymentStatusEnum.PAID, Payment.created_at >= today)
+            )).scalar() or 0
+            total_users = (await session.execute(select(func.count(User.id)))).scalar() or 0
+
+        from app.services.notification import _notify_admins
+        await _notify_admins(
+            f"📊 <b>Kunlik hisobot</b>\n\n"
+            f"• 👥 Yangi users: +{new_users} (jami: {total_users})\n"
+            f"• 📢 Yangi e'lonlar: +{new_listings}\n"
+            f"• 💰 Daromad: {revenue:,} so'm"
+        )
+    except Exception as e:
+        logger.error("Daily report error: %s", e)
+
+
+async def send_weekly_leaderboard():
+    try:
+        from app.services.gamification import get_leaderboard
+        async with async_session() as session:
+            leaders = await get_leaderboard(session, 10)
+
+        if not leaders:
+            return
+
+        text = "🏆 <b>Haftalik top sotuvchilar:</b>\n\n"
+        medals = ['🥇', '🥈', '🥉']
+        for i, u in enumerate(leaders):
+            m = medals[i] if i < 3 else f"{i+1}."
+            text += f"{m} {u['name']} — <b>{u['points']}</b> ball\n"
+
+        from app.services.notification import _send
+        async with async_session() as session:
+            result = await session.execute(select(User.tg_id).where(User.is_blocked == False))
+            tg_ids = result.scalars().all()
+
+        for tg_id in tg_ids[:500]:
+            try:
+                await _send(tg_id, text)
+            except Exception:
+                pass
+
+        logger.info("Weekly leaderboard sent to %d users", len(tg_ids))
+    except Exception as e:
+        logger.error("Weekly leaderboard error: %s", e)
 
 
 async def scheduler_loop():
@@ -186,7 +246,7 @@ async def scheduler_loop():
             tomorrow_9am += timedelta(days=1)
 
         wait_seconds = (tomorrow_9am - now).total_seconds()
-        logger.info("Next scheduled run at %s (in %.0f seconds)", tomorrow_9am, wait_seconds)
+        logger.info("Next run at %s (%.0fs)", tomorrow_9am, wait_seconds)
         await asyncio.sleep(wait_seconds)
 
         try:
