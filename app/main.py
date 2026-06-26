@@ -132,6 +132,7 @@ _safe_include("app.routers.payments")
 _safe_include("app.routers.notifications")
 _safe_include("app.routers.admin")
 _safe_include("app.routers.upload")
+_safe_include("app.routers.reviews")
 
 
 @app.exception_handler(404)

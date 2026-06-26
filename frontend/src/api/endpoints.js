@@ -59,6 +59,12 @@ export const adminAPI = {
   broadcast: (data) => api.post('/admin/broadcast', data),
 }
 
+export const reviewsAPI = {
+  create: (data) => api.post('/reviews', data),
+  byUser: (userId) => api.get(`/reviews/user/${userId}`),
+  byListing: (listingId) => api.get(`/reviews/listing/${listingId}`),
+}
+
 export const uploadAPI = {
   image: (file) => {
     const form = new FormData()

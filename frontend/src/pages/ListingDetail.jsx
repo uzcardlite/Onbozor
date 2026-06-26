@@ -6,6 +6,7 @@ import ImageGallery from '../components/ImageGallery'
 import ProductCard from '../components/ProductCard'
 import { ListSkeleton } from '../components/LoadingSkeleton'
 import { listingsAPI, favouritesAPI } from '../api/endpoints'
+import ReviewSection from '../components/ReviewSection'
 import { useTelegram } from '../hooks/useTelegram'
 
 function formatPrice(n) {
@@ -124,6 +125,8 @@ export default function ListingDetail() {
         >
           🔗 Havolani nusxalash
         </button>
+
+        <ReviewSection listingId={listing.id} sellerId={listing.user_id} />
 
         {similar?.length > 0 && (
           <div className="mt-2 mb-4">

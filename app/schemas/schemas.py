@@ -275,6 +275,34 @@ class BroadcastOut(BaseModel):
     sent_count: int
 
 
+# ───────────── Review ─────────────
+
+class ReviewCreate(BaseModel):
+    listing_id: uuid.UUID
+    rating: int = Field(ge=1, le=5)
+    comment: str | None = Field(default=None, max_length=1000)
+
+
+class ReviewOut(BaseModel):
+    id: uuid.UUID
+    reviewer_id: uuid.UUID
+    reviewer_name: str = ""
+    reviewer_username: str | None = None
+    rating: int
+    comment: str | None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class SellerRating(BaseModel):
+    seller_id: uuid.UUID
+    avg_rating: float
+    total_reviews: int
+    reviews: list[ReviewOut]
+
+
 # ───────────── Search ─────────────
 
 class SearchResponse(BaseModel):

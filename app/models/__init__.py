@@ -11,6 +11,7 @@ from app.models.favourite import Favourite
 from app.models.payment import Payment
 from app.models.broadcast import Broadcast
 from app.models.notification import Notification
+from app.models.review import Review
 
 __all__ = [
     "Base",
@@ -18,5 +19,5 @@ __all__ = [
     "ListingStatusEnum", "PaymentMethodEnum", "PaymentStatusEnum",
     "NotificationTypeEnum",
     "User", "Shop", "Listing", "Favourite",
-    "Payment", "Broadcast", "Notification",
+    "Payment", "Broadcast", "Notification", "Review",
 ]
