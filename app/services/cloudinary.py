@@ -20,7 +20,7 @@ if settings.CLOUDINARY_CLOUD_NAME and settings.CLOUDINARY_API_KEY:
             api_secret=settings.CLOUDINARY_API_SECRET,
         )
         _cloudinary_ready = True
-        logger.info("Cloudinary configured")
+        logger.info("Cloudinary configured (cloud: %s)", settings.CLOUDINARY_CLOUD_NAME)
     except Exception as e:
         logger.warning("Cloudinary init failed: %s", e)
 
@@ -35,19 +35,43 @@ async def upload_image(file: UploadFile) -> dict:
 
     if _cloudinary_ready:
         try:
-            import cloudinary.uploader
             result = cloudinary.uploader.upload(
                 contents,
                 folder="onbozor",
                 resource_type="image",
-                transformation=[{"width": 1200, "height": 1200, "crop": "limit", "quality": "auto"}],
+                eager=[{"width": 800, "crop": "limit", "quality": "auto", "fetch_format": "auto"}],
+                eager_async=True,
             )
-            return {"url": result["secure_url"], "public_id": result["public_id"]}
+            url = result["secure_url"]
+            public_id = result["public_id"]
+            logger.info("Cloudinary upload OK: %s (%d bytes)", public_id, len(contents))
+            return {"url": url, "public_id": public_id}
         except Exception as e:
-            logger.error("Cloudinary upload failed: %s", e)
-            raise HTTPException(status_code=500, detail="Rasm yuklashda xatolik")
+            logger.error("Cloudinary upload failed: %s", e, exc_info=True)
+            raise HTTPException(status_code=500, detail="Rasm yuklashda xatolik yuz berdi")
 
     b64 = base64.b64encode(contents).decode()
     data_url = f"data:{file.content_type};base64,{b64}"
-    logger.info("Cloudinary not configured, using base64 fallback (%d bytes)", len(contents))
+    logger.info("Cloudinary not configured, base64 fallback (%d bytes)", len(contents))
     return {"url": data_url, "public_id": "local"}
+
+
+async def delete_image(public_id: str) -> bool:
+    if not _cloudinary_ready or public_id == "local":
+        return False
+    try:
+        result = cloudinary.uploader.destroy(public_id)
+        ok = result.get("result") == "ok"
+        logger.info("Cloudinary delete %s: %s", public_id, result.get("result"))
+        return ok
+    except Exception as e:
+        logger.error("Cloudinary delete failed: %s", e)
+        return False
+
+
+def get_optimized_url(public_id: str, width: int = 800) -> str:
+    if not _cloudinary_ready or public_id == "local":
+        return ""
+    return cloudinary.CloudinaryImage(public_id).build_url(
+        width=width, crop="limit", quality="auto", fetch_format="auto",
+    )
