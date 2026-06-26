@@ -52,12 +52,15 @@ export default function AddListing() {
     if (!files.length) return
     setUploading(true)
     for (const file of files.slice(0, 5 - previews.length)) {
-      setPreviews((p) => [...p, URL.createObjectURL(file)])
+      const localUrl = URL.createObjectURL(file)
       try {
         const res = await uploadAPI.image(file)
-        set('image_urls', [...form.image_urls, res.data.url])
+        setPreviews((p) => [...p, localUrl])
+        setForm((f) => ({ ...f, image_urls: [...f.image_urls, res.data.url] }))
       } catch (err) {
-        toast.error("Rasm yuklashda xatolik")
+        setPreviews((p) => [...p, localUrl])
+        setForm((f) => ({ ...f, image_urls: [...f.image_urls, localUrl] }))
+        toast('Rasm lokal saqlandi', { icon: '📷' })
       }
     }
     setUploading(false)
@@ -235,7 +238,8 @@ export default function AddListing() {
       case 6:
         return (
           <div>
-            <h2 className="text-lg font-semibold mb-4">📷 Rasmlar</h2>
+            <h2 className="text-lg font-semibold mb-1">📷 Rasmlar</h2>
+            <p className="text-xs text-tg-muted mb-4">Ixtiyoriy — rasmsiz ham e'lon beriladi</p>
             <div className="grid grid-cols-3 gap-2 mb-4">
               {previews.map((p, i) => (
                 <div key={i} className="aspect-square rounded-xl overflow-hidden relative">
