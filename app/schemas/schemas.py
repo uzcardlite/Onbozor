@@ -1,6 +1,7 @@
+import re
 import uuid
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from app.models.enums import (
     SectionEnum, PaymentTypeEnum, ConditionEnum,
     ListingStatusEnum, PaymentMethodEnum, PaymentStatusEnum,
@@ -50,17 +51,38 @@ class UserUpdate(BaseModel):
 
 class ListingCreate(BaseModel):
     section: SectionEnum
-    category: str
-    subcategory: str | None = None
+    category: str = Field(max_length=100)
+    subcategory: str | None = Field(default=None, max_length=100)
     payment_type: PaymentTypeEnum
     condition: ConditionEnum
-    price: int = Field(gt=0)
+    price: int = Field(gt=0, le=10_000_000_000)
     negotiable: bool = False
-    viloyat: str
-    seller_username: str
-    description: str = Field(min_length=10)
-    image_urls: list[str] = []
+    viloyat: str = Field(max_length=100)
+    seller_username: str = Field(max_length=255)
+    description: str = Field(min_length=10, max_length=2000)
+    image_urls: list[str] = Field(default=[], max_length=10)
     shop_id: uuid.UUID | None = None
+
+    @field_validator("seller_username")
+    @classmethod
+    def validate_username(cls, v):
+        v = v.strip()
+        if not v.startswith("@"):
+            v = f"@{v}"
+        if not re.match(r"^@[a-zA-Z0-9_]{3,}$", v):
+            raise ValueError("Username noto'g'ri formatda")
+        return v
+
+    @field_validator("description")
+    @classmethod
+    def sanitize_description(cls, v):
+        v = re.sub(r"<[^>]*>", "", v)
+        return v.strip()
+
+    @field_validator("image_urls")
+    @classmethod
+    def validate_urls(cls, v):
+        return [u for u in v if u.startswith(("http://", "https://", "data:"))]
 
 
 class ListingUpdate(BaseModel):

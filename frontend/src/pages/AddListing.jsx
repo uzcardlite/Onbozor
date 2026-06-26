@@ -258,7 +258,7 @@ export default function AddListing() {
             </div>
             <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={handleFiles} className="hidden" />
             <p className="text-xs text-tg-muted mb-4 text-center">
-              {previews.length}/5 rasm · JPG, PNG, WEBP · max 30MB
+              {previews.length}/5 rasm · JPG, PNG, WEBP · max 10MB
             </p>
             <button onClick={next} className="btn-primary">Keyingi</button>
             <button onClick={back} className="mt-3 text-xs text-tg-muted block mx-auto">← Orqaga</button>

@@ -1,4 +1,6 @@
+import time
 import logging
+from collections import defaultdict
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -24,25 +26,84 @@ if settings.SENTRY_DSN:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("OnBozor API starting (env=%s)", settings.ENVIRONMENT)
+    logger.info("OnBozor API starting (env=%s, debug=%s)", settings.ENVIRONMENT, settings.DEBUG)
     yield
     logger.info("OnBozor API shutting down")
 
 
-app = FastAPI(title="OnBozor API", version="1.0.0", lifespan=lifespan)
+app = FastAPI(
+    title="OnBozor API",
+    version="1.0.0",
+    lifespan=lifespan,
+    docs_url="/docs" if settings.DEBUG else None,
+    redoc_url=None,
+)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.cors_origins_list,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
+
+
+# ── Rate Limiting ──
+_rate_limits: dict[str, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
+
+RATE_RULES = {
+    "POST:/auth/telegram": (5, 60),       # 5/min
+    "POST:/listings": (10, 3600),          # 10/hour
+    "POST:/upload/image": (20, 3600),      # 20/hour
+    "GET:/search": (60, 60),              # 60/min
+}
+DEFAULT_RATE = (100, 60)                   # 100/min
+
+
+def _get_client_ip(request: Request) -> str:
+    forwarded = request.headers.get("X-Forwarded-For", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+@app.middleware("http")
+async def rate_limit_middleware(request: Request, call_next):
+    path = request.url.path
+    if path in ("/health", "/", "/docs", "/openapi.json"):
+        return await call_next(request)
+
+    client_ip = _get_client_ip(request)
+    key = f"{request.method}:{path}"
+    max_requests, window = RATE_RULES.get(key, DEFAULT_RATE)
+
+    now = time.time()
+    bucket = _rate_limits[client_ip][key]
+    _rate_limits[client_ip][key] = [t for t in bucket if now - t < window]
+
+    if len(_rate_limits[client_ip][key]) >= max_requests:
+        return JSONResponse(
+            status_code=429,
+            content={"error": "rate_limit", "detail": f"Limitdan oshdi. {window} soniya kuting."},
+        )
+
+    _rate_limits[client_ip][key].append(now)
+    return await call_next(request)
+
+
+@app.middleware("http")
+async def logging_middleware(request: Request, call_next):
+    start = time.time()
+    response = await call_next(request)
+    ms = round((time.time() - start) * 1000, 1)
+    if request.url.path not in ("/health",):
+        logger.info("%s %s → %s (%sms)", request.method, request.url.path, response.status_code, ms)
+    return response
 
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "version": "1.0.0", "env": settings.ENVIRONMENT}
+    return {"status": "ok", "version": "1.0.0"}
 
 
 @app.get("/")

@@ -5,9 +5,9 @@ class Settings(BaseSettings):
     BOT_TOKEN: str = ""
     DATABASE_URL: str = "postgresql+asyncpg://localhost/onbozor"
 
-    JWT_SECRET: str = "change-me-in-production"
+    JWT_SECRET: str = "change-me-in-production-32chars!"
     JWT_ALGORITHM: str = "HS256"
-    JWT_EXPIRE_MINUTES: int = 1440
+    JWT_EXPIRE_MINUTES: int = 43200  # 30 kun
 
     PAYME_MERCHANT_ID: str = ""
     PAYME_KEY: str = ""
@@ -25,13 +25,12 @@ class Settings(BaseSettings):
     MAX_LISTINGS_PER_USER: int = 10
     REFERRAL_BONUS_PERCENT: int = 5
 
-    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:5173"
-
-    RATE_LIMIT_PER_MINUTE: int = 100
+    CORS_ORIGINS: str = "https://onbozor.vercel.app,http://localhost:3000,http://localhost:5173"
 
     SENTRY_DSN: str = ""
     WEBHOOK_URL: str = ""
     ENVIRONMENT: str = "development"
+    DEBUG: bool = True
 
     ADMIN_IDS: str = "37453466"
     CHANNEL_ID: str = "@StyleMarket_uz"
@@ -39,6 +38,10 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         extra = "ignore"
+
+    @property
+    def is_production(self) -> bool:
+        return self.ENVIRONMENT == "production"
 
     @property
     def admin_ids_list(self) -> list[int]:

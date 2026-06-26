@@ -6,7 +6,7 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp"}
-MAX_SIZE = 30 * 1024 * 1024
+MAX_SIZE = 10 * 1024 * 1024
 
 _cloudinary_ready = False
 
@@ -31,7 +31,7 @@ async def upload_image(file: UploadFile) -> dict:
 
     contents = await file.read()
     if len(contents) > MAX_SIZE:
-        raise HTTPException(status_code=400, detail="Rasm hajmi 30MB dan oshmasligi kerak")
+        raise HTTPException(status_code=400, detail="Rasm hajmi 10MB dan oshmasligi kerak")
 
     if _cloudinary_ready:
         try:

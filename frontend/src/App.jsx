@@ -63,10 +63,12 @@ function AuthGate({ children }) {
         setToken(res.data.token)
         setUser(res.data.user)
       }).catch(() => {
-        setToken('demo-token')
-        setUser(MOCK_USER)
+        if (import.meta.env.DEV) {
+          setToken('demo-token')
+          setUser(MOCK_USER)
+        }
       })
-    } else {
+    } else if (import.meta.env.DEV) {
       setToken('demo-token')
       setUser(MOCK_USER)
     }
