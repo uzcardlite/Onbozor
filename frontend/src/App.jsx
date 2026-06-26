@@ -7,6 +7,7 @@ import { useTelegram } from './hooks/useTelegram'
 import { authAPI } from './api/endpoints'
 import BottomNav from './components/BottomNav'
 import OfflineBanner from './components/OfflineBanner'
+import ErrorBoundary from './components/ErrorBoundary'
 
 const Home = lazy(() => import('./pages/Home'))
 const Onboarding = lazy(() => import('./pages/Onboarding'))
@@ -25,6 +26,7 @@ const Leaderboard = lazy(() => import('./pages/Leaderboard'))
 const Messages = lazy(() => import('./pages/Messages'))
 const Chat = lazy(() => import('./pages/Chat'))
 const Admin = lazy(() => import('./pages/Admin'))
+const NotFound = lazy(() => import('./pages/NotFound'))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -106,7 +108,7 @@ function Layout() {
           <Route path="/messages/:id" element={<Chat />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/admin" element={<Admin />} />
-          <Route path="*" element={<Navigate to="/" />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
       <BottomNav />
@@ -116,6 +118,7 @@ function Layout() {
 
 export default function App() {
   return (
+    <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthGate>
@@ -132,5 +135,6 @@ export default function App() {
         />
       </BrowserRouter>
     </QueryClientProvider>
+    </ErrorBoundary>
   )
 }

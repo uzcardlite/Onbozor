@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAppStore } from '../store/useStore'
 import { useTelegram } from '../hooks/useTelegram'
@@ -9,29 +9,44 @@ const REGIONS = [
   "Jizzax", "Navoiy", "Xorazm", "Qoraqalpog'iston",
 ]
 
-const slides = [
+const SLIDES = [
   {
-    emoji: '🛒',
-    title: 'OnBozor nima?',
-    desc: "O'zbekiston uchun Telegram ichida ishlaydigan mahalliy e'lonlar va do'konlar platformasi.",
+    emoji: '🛍',
+    bg: 'from-blue-600 to-cyan-500',
+    title: 'OnBozor ga xush kelibsiz!',
+    desc: "O'zbekistonning eng yirik Telegram marketplace. Xarid qiling, soting — barchasi bir joyda!",
+    features: ['📦 50,000+ mahsulot', '🏪 1,000+ do\'kon', '🇺🇿 13 ta viloyat'],
   },
   {
-    emoji: '⚡',
-    title: 'Qanday ishlaydi?',
-    items: [
-      { icon: '📢', text: "E'lon bering — minglab xaridorlarga yeting" },
-      { icon: '🏪', text: "Do'kon oching — mahsulotlaringizni soting" },
-      { icon: '👥', text: "Do'stlarni taklif qiling — 5% bonus oling" },
-    ],
+    emoji: '📢',
+    bg: 'from-violet-600 to-purple-500',
+    title: "E'lon bering, tez soting!",
+    desc: 'Minglab xaridorlar sizni kutmoqda. Bepul e\'lon bering — 5 ta bo\'limda!',
+    features: ['🏠 Uy-joy', '📱 Texnika', '🚗 Avtomobil'],
+  },
+  {
+    emoji: '🏪',
+    bg: 'from-emerald-600 to-green-500',
+    title: "Do'kon oching, biznes quring!",
+    desc: "Rasmiy do'kon oching, ishonchli sotuvchi bo'ling va daromad oling.",
+    features: ['✅ Verified badge', '🚀 Promosiya', '👥 Referral 5% bonus'],
   },
 ]
 
 export default function Onboarding() {
   const [step, setStep] = useState(0)
   const [region, setRegion] = useState(null)
+  const [direction, setDirection] = useState(1)
   const { setOnboarded, setRegion: saveRegion } = useAppStore()
   const navigate = useNavigate()
   const { haptic } = useTelegram()
+  const touchStartX = useRef(0)
+
+  const goTo = (next) => {
+    setDirection(next > step ? 1 : -1)
+    setStep(next)
+    haptic('impact', 'light')
+  }
 
   const finish = () => {
     if (!region) return
@@ -41,57 +56,79 @@ export default function Onboarding() {
     navigate('/')
   }
 
-  const dots = (
-    <div className="flex gap-1.5 justify-center mb-6">
-      {[0, 1, 2].map((i) => (
-        <div key={i} className={`h-1 rounded-full transition-all duration-300 ${i === step ? 'w-6 bg-tg-accent' : i < step ? 'w-3 bg-tg-accent/50' : 'w-3 bg-tg-muted/20'}`} />
-      ))}
-    </div>
-  )
+  const handleTouchStart = (e) => { touchStartX.current = e.touches[0].clientX }
+  const handleTouchEnd = (e) => {
+    const diff = e.changedTouches[0].clientX - touchStartX.current
+    if (Math.abs(diff) < 50) return
+    if (diff < 0 && step < 2) goTo(step + 1)
+    if (diff > 0 && step > 0) goTo(step - 1)
+  }
+
+  const slide = step < 3 ? SLIDES[step] : null
 
   return (
-    <div className="min-h-screen bg-tg-bg flex flex-col items-center justify-center p-6 max-w-app mx-auto">
-      {step < 2 ? (
-        <div className="text-center w-full animate-fade-in" key={step}>
-          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-tg-accent to-blue-600 flex items-center justify-center text-4xl mx-auto mb-6 shadow-lg shadow-tg-accent/20">
-            {slides[step].emoji}
+    <div className="min-h-screen bg-tg-bg flex flex-col max-w-app mx-auto" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+      {step < 3 ? (
+        <div className="flex-1 flex flex-col animate-fade-in" key={step}>
+          <div className={`bg-gradient-to-br ${slide.bg} px-6 pt-16 pb-12 rounded-b-[2rem] flex flex-col items-center`}>
+            <div className="w-24 h-24 rounded-3xl bg-white/20 backdrop-blur flex items-center justify-center text-5xl mb-6 shadow-xl">
+              {slide.emoji}
+            </div>
+            <h1 className="text-2xl font-bold text-center mb-2">{slide.title}</h1>
+            <p className="text-sm text-white/80 text-center leading-relaxed max-w-[280px]">{slide.desc}</p>
           </div>
-          <h1 className="text-2xl font-bold mb-3">{slides[step].title}</h1>
-          {slides[step].desc && <p className="text-sm text-tg-muted mb-8 leading-relaxed">{slides[step].desc}</p>}
-          {slides[step].items && (
-            <div className="space-y-3 mb-8 text-left">
-              {slides[step].items.map((item, i) => (
-                <div key={i} className="card flex items-center gap-3 p-4 animate-slide-left" style={{ animationDelay: `${i * 100}ms` }}>
-                  <span className="text-2xl">{item.icon}</span>
-                  <span className="text-sm">{item.text}</span>
+
+          <div className="flex-1 px-6 pt-8">
+            <div className="space-y-3">
+              {slide.features.map((f, i) => (
+                <div key={i} className="card p-3.5 flex items-center gap-3 animate-slide-left" style={{ animationDelay: `${i * 80}ms` }}>
+                  <span className="text-xl">{f.split(' ')[0]}</span>
+                  <span className="text-sm">{f.split(' ').slice(1).join(' ')}</span>
                 </div>
               ))}
             </div>
-          )}
-          {dots}
-          <button onClick={() => { haptic('impact'); setStep(step + 1) }} className="btn-primary">
-            Keyingi →
-          </button>
+          </div>
+
+          <div className="px-6 pb-8">
+            <div className="flex justify-center gap-2 mb-5">
+              {[0, 1, 2].map((i) => (
+                <button key={i} onClick={() => goTo(i)} className={`h-1.5 rounded-full transition-all duration-300 ${i === step ? 'w-8 bg-tg-accent' : i < step ? 'w-4 bg-tg-accent/40' : 'w-4 bg-tg-muted/20'}`} />
+              ))}
+            </div>
+            <button onClick={() => goTo(step + 1)} className="btn-primary">
+              {step === 2 ? 'Boshlash 🚀' : 'Keyingi →'}
+            </button>
+            {step > 0 && (
+              <button onClick={() => goTo(step - 1)} className="text-xs text-tg-muted text-center w-full mt-3">← Orqaga</button>
+            )}
+          </div>
         </div>
       ) : (
-        <div className="w-full animate-fade-in">
-          <h1 className="text-2xl font-bold text-center mb-2">📍 Viloyatingiz</h1>
-          <p className="text-sm text-tg-muted text-center mb-6">Sizga yaqin e'lonlarni ko'rsatamiz</p>
-          <div className="grid grid-cols-2 gap-2 mb-6">
-            {REGIONS.map((r) => (
-              <button
-                key={r}
-                onClick={() => { haptic('selection'); setRegion(r) }}
-                className={`py-3 rounded-lg text-sm font-medium transition-all duration-150 ${region === r ? 'bg-tg-accent text-white shadow-lg shadow-tg-accent/20' : 'bg-tg-card text-tg-muted border border-tg-border'}`}
-              >
-                {r}
-              </button>
-            ))}
+        <div className="flex-1 flex flex-col px-6 pt-8 animate-fade-in">
+          <div className="text-center mb-6">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-tg-accent to-blue-600 flex items-center justify-center text-3xl mx-auto mb-4 shadow-lg shadow-tg-accent/20">📍</div>
+            <h1 className="text-2xl font-bold mb-1">Viloyatingiz</h1>
+            <p className="text-sm text-tg-muted">Sizga yaqin e'lonlarni ko'rsatamiz</p>
           </div>
-          {dots}
-          <button onClick={finish} disabled={!region} className={`btn-primary ${!region ? 'opacity-40' : ''}`}>
-            Boshlash 🚀
-          </button>
+
+          <div className="flex-1 overflow-y-auto">
+            <div className="grid grid-cols-2 gap-2">
+              {REGIONS.map((r) => (
+                <button key={r} onClick={() => { haptic('selection'); setRegion(r) }}
+                  className={`py-3.5 rounded-xl text-sm font-medium transition-all duration-200 ${region === r ? 'bg-tg-accent text-white shadow-lg shadow-tg-accent/20 scale-[1.02]' : 'bg-tg-card text-tg-muted border border-tg-border active:scale-95'}`}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="py-6">
+            <button onClick={finish} disabled={!region} className={`btn-primary ${!region ? 'opacity-30' : ''}`}>
+              Boshlash 🚀
+            </button>
+            <button onClick={() => goTo(2)} className="text-xs text-tg-muted text-center w-full mt-3">← Orqaga</button>
+          </div>
         </div>
       )}
     </div>
