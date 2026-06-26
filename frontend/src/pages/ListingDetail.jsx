@@ -78,15 +78,42 @@ export default function ListingDetail() {
           </div>
         </div>
 
-        <a
-          href={`https://t.me/${listing.seller_username.replace('@', '')}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={() => haptic('impact', 'medium')}
-          className="btn-primary block text-center mb-6"
+        <div className="flex gap-2 mb-4">
+          <a
+            href={`https://t.me/${listing.seller_username.replace('@', '')}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => haptic('impact', 'medium')}
+            className="btn-primary block text-center flex-1"
+          >
+            📱 Bog'lanish
+          </a>
+          <button
+            onClick={() => {
+              haptic('impact')
+              const botUser = import.meta.env.VITE_BOT_USERNAME || 'onbozorbot'
+              const link = `https://t.me/${botUser}?start=listing_${listing.id}`
+              const text = `${listing.category} — ${formatPrice(listing.price)} so'm (${listing.viloyat})`
+              const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`
+              window.open(shareUrl, '_blank')
+            }}
+            className="btn-outline !w-auto px-4 shrink-0"
+          >
+            📤
+          </button>
+        </div>
+        <button
+          onClick={() => {
+            haptic('impact', 'light')
+            const botUser = import.meta.env.VITE_BOT_USERNAME || 'onbozorbot'
+            const link = `https://t.me/${botUser}?start=listing_${listing.id}`
+            navigator.clipboard.writeText(link)
+            toast.success('Havola nusxalandi!')
+          }}
+          className="text-xs text-tg-muted text-center w-full mb-6 active:text-tg-accent transition-colors"
         >
-          📱 Bog'lanish — {listing.seller_username}
-        </a>
+          🔗 Havolani nusxalash
+        </button>
 
         {similar?.length > 0 && (
           <div className="mt-2 mb-4">

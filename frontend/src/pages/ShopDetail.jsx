@@ -88,7 +88,7 @@ export default function ShopDetail() {
       <div className="px-4 pt-4">
         <p className="text-sm text-tg-muted mb-4">{shop.description}</p>
 
-        <div className="flex gap-2 mb-6">
+        <div className="flex gap-2 mb-3">
           <button
             onClick={() => { haptic('impact'); favMutation.mutate() }}
             disabled={favMutation.isPending}
@@ -96,16 +96,30 @@ export default function ShopDetail() {
           >
             {favMutation.isPending ? '⏳' : '❤️'} Kuzatish
           </button>
-          <a
-            href={`https://t.me/${shop.owner_username || ''}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => haptic('impact', 'medium')}
-            className="btn-primary flex-1 text-sm text-center"
+          <button
+            onClick={() => {
+              haptic('impact')
+              const botUser = import.meta.env.VITE_BOT_USERNAME || 'onbozorbot'
+              const link = `https://t.me/${botUser}?start=shop_${shop.id}`
+              const text = `🏪 ${shop.name} — ${shop.viloyat || "O'zbekiston"}`
+              window.open(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`, '_blank')
+            }}
+            className="btn-outline !w-auto px-4 text-sm shrink-0"
           >
-            📱 Bog'lanish
-          </a>
+            📤
+          </button>
         </div>
+        <button
+          onClick={() => {
+            haptic('impact', 'light')
+            const botUser = import.meta.env.VITE_BOT_USERNAME || 'onbozorbot'
+            navigator.clipboard.writeText(`https://t.me/${botUser}?start=shop_${shop.id}`)
+            toast.success('Havola nusxalandi!')
+          }}
+          className="text-xs text-tg-muted text-center w-full mb-6 active:text-tg-accent transition-colors"
+        >
+          🔗 Havolani nusxalash
+        </button>
 
         <div className="flex justify-between items-center mb-3">
           <h3 className="text-sm font-semibold">Mahsulotlar</h3>

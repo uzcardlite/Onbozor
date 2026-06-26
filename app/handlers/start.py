@@ -12,6 +12,7 @@ from app.states import RegistrationState
 logger = logging.getLogger(__name__)
 
 WEB_APP_URL = "https://onbozor.vercel.app"
+BOT_USERNAME = "onbozorbot"
 
 
 def webapp_keyboard():
@@ -38,6 +39,15 @@ def subscribe_keyboard():
     ])
 
 
+def deep_link_keyboard(item_type: str, item_id: str):
+    url = f"{WEB_APP_URL}/listing/{item_id}" if item_type == "listing" else f"{WEB_APP_URL}/shop/{item_id}"
+    label = "📢 E'lonni ko'rish" if item_type == "listing" else "🏪 Do'konni ko'rish"
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton(label, web_app=WebAppInfo(url=url))],
+        [InlineKeyboardButton("🛍 Bosh sahifa", web_app=WebAppInfo(url=WEB_APP_URL))],
+    ])
+
+
 async def _is_subscribed(bot, user_id: int) -> bool:
     try:
         member = await bot.get_chat_member(chat_id=settings.CHANNEL_ID, user_id=user_id)
@@ -45,6 +55,17 @@ async def _is_subscribed(bot, user_id: int) -> bool:
     except Exception as e:
         logger.warning("Subscription check failed: %s", e)
         return True
+
+
+def _parse_deep_link(args: list[str] | None) -> tuple[str | None, str | None]:
+    if not args:
+        return None, None
+    arg = args[0]
+    if arg.startswith("listing_"):
+        return "listing", arg[8:]
+    if arg.startswith("shop_"):
+        return "shop", arg[5:]
+    return "referral", arg
 
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -60,7 +81,8 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return ConversationHandler.END
 
-        args = context.args
+        link_type, link_id = _parse_deep_link(context.args)
+
         async with async_session() as session:
             user, is_new = await get_or_create_user(
                 session,
@@ -68,10 +90,11 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 full_name=update.effective_user.full_name,
                 username=update.effective_user.username,
             )
-            if is_new and args:
-                await process_referral(session, args[0], user)
+            if is_new and link_type == "referral" and link_id:
+                await process_referral(session, link_id, user)
 
             if is_new or not user.viloyat:
+                context.user_data["pending_deep_link"] = (link_type, link_id)
                 await update.message.reply_text(
                     "👋 OnBozor ga xush kelibsiz!\n\n"
                     "📍 Avval viloyatingizni tanlang:",
@@ -79,20 +102,24 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 )
                 return RegistrationState.REGION
 
-        await update.message.reply_text(
-            f"👋 Salom, {update.effective_user.first_name}!\n\n"
-            "🛒 <b>OnBozor</b> — O'zbekiston bozori.\n"
-            "Quyidagi tugmalardan foydalaning:",
-            parse_mode="HTML",
-            reply_markup=webapp_keyboard(),
-        )
+        if link_type in ("listing", "shop") and link_id:
+            await update.message.reply_text(
+                f"👋 Salom, {update.effective_user.first_name}!\n\n"
+                f"Quyidagi tugmani bosib ko'ring:",
+                reply_markup=deep_link_keyboard(link_type, link_id),
+            )
+        else:
+            await update.message.reply_text(
+                f"👋 Salom, {update.effective_user.first_name}!\n\n"
+                "🛒 <b>OnBozor</b> — O'zbekiston bozori.\n"
+                "Quyidagi tugmalardan foydalaning:",
+                parse_mode="HTML",
+                reply_markup=webapp_keyboard(),
+            )
         return ConversationHandler.END
     except Exception as e:
         logger.error("start_command error: %s", e, exc_info=True)
-        await update.message.reply_text(
-            "👋 OnBozor ga xush kelibsiz!",
-            reply_markup=webapp_keyboard(),
-        )
+        await update.message.reply_text("👋 OnBozor ga xush kelibsiz!", reply_markup=webapp_keyboard())
         return ConversationHandler.END
 
 
@@ -114,27 +141,18 @@ async def check_subscription(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 full_name=update.effective_user.full_name,
                 username=update.effective_user.username,
             )
-
             if is_new or not user.viloyat:
-                await query.message.reply_text(
-                    "📍 Viloyatingizni tanlang:",
-                    reply_markup=regions_keyboard(),
-                )
+                await query.message.reply_text("📍 Viloyatingizni tanlang:", reply_markup=regions_keyboard())
                 return RegistrationState.REGION
 
         await query.message.reply_text(
-            f"👋 Salom, {update.effective_user.first_name}!\n\n"
-            "🛒 <b>OnBozor</b> — O'zbekiston bozori.\n"
-            "Quyidagi tugmalardan foydalaning:",
+            "🛒 <b>OnBozor</b> — O'zbekiston bozori.\nQuyidagi tugmalardan foydalaning:",
             parse_mode="HTML",
             reply_markup=webapp_keyboard(),
         )
     except Exception as e:
         logger.error("check_subscription error: %s", e, exc_info=True)
-        await query.message.reply_text(
-            "👋 OnBozor ga xush kelibsiz!",
-            reply_markup=webapp_keyboard(),
-        )
+        await query.message.reply_text("👋 OnBozor ga xush kelibsiz!", reply_markup=webapp_keyboard())
 
 
 async def select_region(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -152,12 +170,19 @@ async def select_region(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.error("select_region error: %s", e)
 
     await query.edit_message_text(f"✅ Viloyat saqlandi: {region}")
-    await query.message.reply_text(
-        "🛒 <b>OnBozor</b> — O'zbekiston bozori.\n"
-        "Quyidagi tugmalardan foydalaning:",
-        parse_mode="HTML",
-        reply_markup=webapp_keyboard(),
-    )
+
+    pending = context.user_data.pop("pending_deep_link", (None, None))
+    if pending[0] in ("listing", "shop") and pending[1]:
+        await query.message.reply_text(
+            "Quyidagi tugmani bosib ko'ring:",
+            reply_markup=deep_link_keyboard(pending[0], pending[1]),
+        )
+    else:
+        await query.message.reply_text(
+            "🛒 <b>OnBozor</b> — O'zbekiston bozori.\nQuyidagi tugmalardan foydalaning:",
+            parse_mode="HTML",
+            reply_markup=webapp_keyboard(),
+        )
     return ConversationHandler.END
 
 
