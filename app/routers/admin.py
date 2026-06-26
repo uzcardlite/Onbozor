@@ -136,13 +136,19 @@ async def approve_listing(
     if not listing:
         raise HTTPException(status_code=404, detail="E'lon topilmadi")
     await update_listing(db, listing_id, status=ListingStatusEnum.ACTIVE)
-    await create_notification(
-        db,
-        user_id=listing.user_id,
-        type=NotificationTypeEnum.LISTING_APPROVED,
-        title="E'lon tasdiqlandi",
-        body=f"Sizning \"{listing.category}\" e'loningiz tasdiqlandi va endi barchaga ko'rinadi.",
-    )
+    if listing.user_id:
+        await create_notification(
+            db,
+            user_id=listing.user_id,
+            type=NotificationTypeEnum.LISTING_APPROVED,
+            title="E'lon tasdiqlandi",
+            body=f"Sizning \"{listing.category}\" e'loningiz tasdiqlandi.",
+        )
+        from app.crud import get_user as crud_get_user
+        user = await crud_get_user(db, listing.user_id)
+        if user:
+            from app.services.notification import notify_listing_approved
+            await notify_listing_approved(user.tg_id, str(listing_id), listing.category)
     return {"status": "approved"}
 
 
@@ -157,13 +163,19 @@ async def reject_listing(
     if not listing:
         raise HTTPException(status_code=404, detail="E'lon topilmadi")
     await update_listing(db, listing_id, status=ListingStatusEnum.REJECTED, reject_reason=body.reason)
-    await create_notification(
-        db,
-        user_id=listing.user_id,
-        type=NotificationTypeEnum.LISTING_REJECTED,
-        title="E'lon rad etildi",
-        body=f"Sizning e'loningiz rad etildi. Sabab: {body.reason}",
-    )
+    if listing.user_id:
+        await create_notification(
+            db,
+            user_id=listing.user_id,
+            type=NotificationTypeEnum.LISTING_REJECTED,
+            title="E'lon rad etildi",
+            body=f"Sabab: {body.reason}",
+        )
+        from app.crud import get_user as crud_get_user
+        user = await crud_get_user(db, listing.user_id)
+        if user:
+            from app.services.notification import notify_listing_rejected
+            await notify_listing_rejected(user.tg_id, listing.category, body.reason)
     return {"status": "rejected"}
 
 
@@ -198,8 +210,13 @@ async def approve_shop(
         user_id=shop.owner_id,
         type=NotificationTypeEnum.SHOP_APPROVED,
         title="Do'kon tasdiqlandi",
-        body=f"\"{shop.name}\" do'koningiz tasdiqlandi. To'lovni amalga oshirib, faollashtiring.",
+        body=f"\"{shop.name}\" do'koningiz tasdiqlandi.",
     )
+    from app.crud import get_user as crud_get_user
+    owner = await crud_get_user(db, shop.owner_id)
+    if owner:
+        from app.services.notification import notify_shop_approved
+        await notify_shop_approved(owner.tg_id, shop.name, str(shop_id))
     return {"status": "approved"}
 
 

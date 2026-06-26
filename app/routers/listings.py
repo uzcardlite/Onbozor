@@ -83,6 +83,10 @@ async def create_new_listing(
         image_urls=body.image_urls or [],
         expires_at=datetime.now(timezone.utc) + timedelta(days=30),
     )
+
+    from app.services.notification import admin_new_listing
+    await admin_new_listing(str(listing.id), listing.category, listing.price, listing.viloyat)
+
     return ListingOut.model_validate(listing)
 
 

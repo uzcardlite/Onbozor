@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from telegram.ext import Application, CommandHandler
 from app.config import settings
@@ -15,6 +16,14 @@ logging.basicConfig(
     level=logging.INFO,
 )
 logger = logging.getLogger("onbozor.bot")
+
+
+async def start_scheduler():
+    try:
+        from app.services.scheduler import scheduler_loop
+        await scheduler_loop()
+    except Exception as e:
+        logger.error("Scheduler crashed: %s", e, exc_info=True)
 
 
 def main():
@@ -41,7 +50,9 @@ def main():
     for h in get_admin_handlers():
         app.add_handler(h)
 
-    logger.info("Bot polling started")
+    logger.info("Bot polling + scheduler starting")
+    loop = asyncio.new_event_loop()
+    loop.create_task(start_scheduler())
     app.run_polling(drop_pending_updates=True)
 
 
