@@ -16,6 +16,38 @@ const CATEGORIES = [
   { slug: 'kiyim', emoji: '👕', label: 'Kiyim', gradient: 'from-emerald-600 to-green-500' },
 ]
 
+function PopularSection() {
+  const viewed = (() => {
+    try { return JSON.parse(localStorage.getItem('viewed_categories') || '[]') } catch { return [] }
+  })()
+  const topCategory = viewed.length > 0
+    ? [...new Set(viewed)].sort((a, b) => viewed.filter((x) => x === b).length - viewed.filter((x) => x === a).length)[0]
+    : null
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['popular', topCategory],
+    queryFn: () => listingsAPI.list({ sort: 'popular', limit: 4, category: topCategory }).then((r) => r.data),
+  })
+
+  if (isLoading || !data?.length) return null
+
+  return (
+    <div className="px-4 mt-6">
+      <div className="flex justify-between items-center mb-3">
+        <h2 className="text-base font-semibold">🔥 {topCategory ? `${topCategory} uchun` : 'Mashhur'}</h2>
+        <Link to={`/search?sort=popular`} className="text-xs text-tg-accent font-medium">Barchasi →</Link>
+      </div>
+      <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 snap-x">
+        {data.map((l) => (
+          <div key={l.id} className="min-w-[160px] snap-start shrink-0">
+            <ProductCard listing={l} />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function Home() {
   const { haptic } = useTelegram()
 
@@ -77,6 +109,8 @@ export default function Home() {
           </Link>
         </div>
       </div>
+
+      <PopularSection />
 
       <div className="px-4 mt-6">
         <div className="flex justify-between items-center mb-3">

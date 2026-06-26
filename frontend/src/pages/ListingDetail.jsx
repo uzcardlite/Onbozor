@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
@@ -26,6 +27,15 @@ export default function ListingDetail() {
     queryFn: () => listingsAPI.list({ section: listing.section, limit: 4 }).then((r) => r.data),
     enabled: !!listing,
   })
+
+  useEffect(() => {
+    if (!listing?.category) return
+    try {
+      const viewed = JSON.parse(localStorage.getItem('viewed_categories') || '[]')
+      viewed.push(listing.category)
+      localStorage.setItem('viewed_categories', JSON.stringify(viewed.slice(-20)))
+    } catch {}
+  }, [listing?.category])
 
   const favMutation = useMutation({
     mutationFn: () => favouritesAPI.toggleListing(id),

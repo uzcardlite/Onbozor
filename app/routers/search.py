@@ -14,8 +14,12 @@ async def full_search(
     q: str = Query("", min_length=0),
     section: SectionEnum | None = None,
     viloyat: str | None = None,
+    category: str | None = None,
+    condition: str | None = None,
+    payment_type: str | None = None,
     price_min: int | None = None,
     price_max: int | None = None,
+    sort: str = Query("newest"),
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
@@ -25,8 +29,9 @@ async def full_search(
 
     listings, total_listings = await search_listings(
         db, q=query, section=section, viloyat=viloyat,
+        category=category, condition=condition, payment_type=payment_type,
         price_min=price_min, price_max=price_max,
-        limit=limit, offset=offset,
+        sort=sort, limit=limit, offset=offset,
     )
     shops, total_shops = await search_shops(
         db, q=query, section=section, viloyat=viloyat,
