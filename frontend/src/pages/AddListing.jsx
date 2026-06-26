@@ -88,6 +88,7 @@ export default function AddListing() {
 
   const submit = () => {
     setError(null)
+    const validUrls = form.image_urls.filter(u => u.startsWith('http') || u.startsWith('data:'))
     mutation.mutate({
       section: form.section,
       category: form.category,
@@ -98,7 +99,7 @@ export default function AddListing() {
       viloyat: form.viloyat,
       seller_username: form.seller_username,
       description: form.description,
-      image_urls: form.image_urls,
+      image_urls: validUrls,
     })
   }
 

@@ -1,5 +1,5 @@
 import uuid
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import jwt
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,6 +10,7 @@ from app.models.user import User
 from app.crud import get_user
 
 security = HTTPBearer()
+security_optional = HTTPBearer(auto_error=False)
 
 
 def create_jwt(user_id: uuid.UUID) -> str:
@@ -40,6 +41,19 @@ async def get_current_user(
     if user.is_blocked:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Akkaunt bloklangan")
     return user
+
+
+async def get_optional_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(security_optional),
+    db: AsyncSession = Depends(get_db),
+) -> User | None:
+    if not credentials:
+        return None
+    try:
+        user_id = decode_jwt(credentials.credentials)
+        return await get_user(db, user_id)
+    except Exception:
+        return None
 
 
 async def get_admin_user(user: User = Depends(get_current_user)) -> User:

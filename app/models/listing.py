@@ -19,8 +19,8 @@ class Listing(Base, UUIDMixin, TimestampMixin):
         Index("ix_listings_created_at", "created_at"),
     )
 
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id")
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
     )
     shop_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("shops.id"), nullable=True

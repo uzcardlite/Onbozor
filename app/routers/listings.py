@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.dependencies import get_current_user
+from app.dependencies import get_current_user, get_optional_user
 from app.models.user import User
 from app.models.enums import SectionEnum, PaymentTypeEnum, ConditionEnum, ListingStatusEnum
 from app.crud import (
@@ -62,12 +62,13 @@ async def get_single_listing(listing_id: uuid.UUID, db: AsyncSession = Depends(g
 @router.post("", response_model=ListingOut, status_code=201)
 async def create_new_listing(
     body: ListingCreate,
-    user: User = Depends(get_current_user),
+    user: User | None = Depends(get_optional_user),
     db: AsyncSession = Depends(get_db),
 ):
+    user_id = user.id if user else None
     listing = await create_listing(
         db,
-        user_id=user.id,
+        user_id=user_id,
         shop_id=body.shop_id,
         section=body.section,
         category=body.category,
@@ -79,7 +80,7 @@ async def create_new_listing(
         viloyat=body.viloyat,
         seller_username=body.seller_username,
         description=body.description,
-        image_urls=body.image_urls,
+        image_urls=body.image_urls or [],
         expires_at=datetime.now(timezone.utc) + timedelta(days=30),
     )
     return ListingOut.model_validate(listing)

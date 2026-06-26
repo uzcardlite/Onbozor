@@ -78,7 +78,7 @@ class ListingUpdate(BaseModel):
 
 class ListingOut(BaseModel):
     id: uuid.UUID
-    user_id: uuid.UUID
+    user_id: uuid.UUID | None
     shop_id: uuid.UUID | None
     section: SectionEnum
     category: str
