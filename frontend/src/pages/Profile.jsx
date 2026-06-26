@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import { listingsAPI, shopsAPI, analyticsAPI } from '../api/endpoints'
+import { listingsAPI, shopsAPI, analyticsAPI, gamificationAPI } from '../api/endpoints'
 import { useUserStore, useAppStore } from '../store/useStore'
 import { useTelegram } from '../hooks/useTelegram'
 
@@ -47,6 +47,14 @@ export default function Profile() {
     queryFn: () => analyticsAPI.my().then((r) => r.data),
     enabled: !isDemo, retry: false,
   })
+
+  const { data: gameStats } = useQuery({
+    queryKey: ['my-game-stats'],
+    queryFn: () => gamificationAPI.myStats().then((r) => r.data),
+    enabled: !isDemo, retry: false,
+  })
+
+  const LEVEL_NAMES = { 1: 'Yangi', 2: 'Faol', 3: 'Tajribali', 4: 'Professional', 5: 'Ekspert ⭐' }
 
   const changeRegion = (viloyat) => {
     haptic('selection')
@@ -112,6 +120,33 @@ export default function Profile() {
             </div>
           )}
         </div>
+
+        {!isDemo && gameStats && (
+          <div className="card p-4 mb-4">
+            <div className="flex justify-between items-center mb-2">
+              <div>
+                <span className="text-xs text-tg-muted">Daraja: </span>
+                <span className="text-xs font-bold">{LEVEL_NAMES[gameStats.level]}</span>
+              </div>
+              <Link to="/leaderboard" className="text-[10px] text-tg-accent">🏆 Reyting →</Link>
+            </div>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="flex-1 h-2 bg-tg-bg rounded-full overflow-hidden">
+                <div className="h-full bg-tg-accent rounded-full transition-all duration-500" style={{ width: `${gameStats.progress}%` }} />
+              </div>
+              <span className="text-[10px] text-tg-muted">{gameStats.points}/{gameStats.next_level}</span>
+            </div>
+            {gameStats.badges?.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {gameStats.badges.map((b) => (
+                  <span key={b.type} className={`text-[10px] px-2 py-0.5 rounded-md ${b.earned ? 'bg-tg-yellow/15 text-tg-yellow' : 'bg-tg-bg text-tg-muted/40'}`} title={b.desc}>
+                    {b.emoji} {b.name}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-2 mb-6">
           <Link to="/referral" className="card p-3.5 flex items-center gap-2.5 active:scale-[0.98] transition-transform">

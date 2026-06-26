@@ -28,6 +28,8 @@ class User(Base, UUIDMixin, TimestampMixin):
     is_blocked: Mapped[bool] = mapped_column(Boolean, default=False)
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    points: Mapped[int] = mapped_column(Integer, default=0)
+    level: Mapped[int] = mapped_column(Integer, default=1)
 
     referrer = relationship("User", remote_side="User.id", foreign_keys=[referred_by])
     shops = relationship("Shop", back_populates="owner")

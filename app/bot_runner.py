@@ -26,6 +26,50 @@ async def start_scheduler():
         logger.error("Scheduler crashed: %s", e, exc_info=True)
 
 
+async def _leaderboard_cmd(update, context):
+    try:
+        from app.database import async_session
+        from app.services.gamification import get_leaderboard
+        async with async_session() as session:
+            leaders = await get_leaderboard(session, 10)
+        if not leaders:
+            await update.message.reply_text("🏆 Hali reyting yo'q.")
+            return
+        text = "🏆 <b>Top 10 sotuvchilar:</b>\n\n"
+        medals = ['🥇', '🥈', '🥉']
+        for i, u in enumerate(leaders):
+            m = medals[i] if i < 3 else f"{i+1}."
+            text += f"{m} {u['name']} — <b>{u['points']}</b> ball\n"
+        await update.message.reply_text(text, parse_mode="HTML")
+    except Exception as e:
+        logger.error("leaderboard cmd error: %s", e)
+        await update.message.reply_text("❌ Xatolik yuz berdi.")
+
+
+async def _mybadges_cmd(update, context):
+    try:
+        from app.database import async_session
+        from app.services.user_service import get_user
+        from app.services.gamification import get_user_badges, level_progress
+        async with async_session() as session:
+            user = await get_user(session, update.effective_user.id)
+            if not user:
+                await update.message.reply_text("❌ /start buyrug'ini yuboring.")
+                return
+            badges = await get_user_badges(session, user.id)
+            progress = level_progress(user.points)
+
+        text = f"🎖 <b>Mening medallarim</b>\n\n"
+        text += f"📊 Ball: <b>{progress['points']}</b> | Daraja: <b>{progress['name']}</b>\n\n"
+        for b in badges:
+            status = "✅" if b["earned"] else "🔒"
+            text += f"{status} {b['emoji']} {b['name']} — {b['desc']}\n"
+        await update.message.reply_text(text, parse_mode="HTML")
+    except Exception as e:
+        logger.error("mybadges cmd error: %s", e)
+        await update.message.reply_text("❌ Xatolik yuz berdi.")
+
+
 def main():
     if not settings.BOT_TOKEN:
         logger.error("BOT_TOKEN is not set")
@@ -49,6 +93,8 @@ def main():
         app.add_handler(h)
     for h in get_admin_handlers():
         app.add_handler(h)
+    app.add_handler(CommandHandler("leaderboard", _leaderboard_cmd))
+    app.add_handler(CommandHandler("mybadges", _mybadges_cmd))
 
     logger.info("Bot polling + scheduler starting")
     loop = asyncio.new_event_loop()

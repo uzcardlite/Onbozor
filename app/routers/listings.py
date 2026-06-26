@@ -98,6 +98,10 @@ async def create_new_listing(
     from app.services.notification import admin_new_listing
     await admin_new_listing(str(listing.id), listing.category, listing.price, listing.viloyat)
 
+    if user_id:
+        from app.services.gamification import award_points
+        await award_points(db, user_id, "new_listing")
+
     return ListingOut.model_validate(listing)
 
 

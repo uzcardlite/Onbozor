@@ -20,6 +20,7 @@ import Referral from './pages/Referral'
 import Profile from './pages/Profile'
 import PaymentResult from './pages/PaymentResult'
 import OpenShop from './pages/OpenShop'
+import Leaderboard from './pages/Leaderboard'
 import Admin from './pages/Admin'
 
 const queryClient = new QueryClient({
@@ -106,6 +107,7 @@ function Layout() {
         <Route path="/profile" element={<Profile />} />
         <Route path="/open-shop" element={<OpenShop />} />
         <Route path="/payment-result" element={<PaymentResult />} />
+        <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>

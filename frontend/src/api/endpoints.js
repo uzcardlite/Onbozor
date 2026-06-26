@@ -59,6 +59,11 @@ export const adminAPI = {
   broadcast: (data) => api.post('/admin/broadcast', data),
 }
 
+export const gamificationAPI = {
+  myStats: () => api.get('/gamification/my-stats'),
+  leaderboard: () => api.get('/gamification/leaderboard'),
+}
+
 export const analyticsAPI = {
   my: () => api.get('/analytics/my'),
   admin: () => api.get('/analytics/admin'),
