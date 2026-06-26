@@ -13,6 +13,7 @@ from app.models.broadcast import Broadcast
 from app.models.notification import Notification
 from app.models.review import Review
 from app.models.promotion import Promotion, PromotionTypeEnum
+from app.models.listing_view import ListingView
 
 __all__ = [
     "Base",

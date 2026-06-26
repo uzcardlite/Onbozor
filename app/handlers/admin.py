@@ -181,6 +181,36 @@ async def broadcast_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 
+async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_admin(update.effective_user.id):
+        await update.message.reply_text("❌ Sizda ruxsat yo'q.")
+        return
+    try:
+        from app.models.payment import Payment
+        from app.models.enums import PaymentStatusEnum
+        async with async_session() as session:
+            total_users = (await session.execute(select(func.count(User.id)))).scalar()
+            active = await count_listings(session, ListingStatusEnum.ACTIVE)
+            pending = await count_listings(session, ListingStatusEnum.PENDING)
+            shops = await count_shops(session, active_only=True)
+            revenue = (await session.execute(
+                select(func.coalesce(func.sum(Payment.amount), 0)).where(Payment.status == PaymentStatusEnum.PAID)
+            )).scalar()
+
+        await update.message.reply_text(
+            f"📊 <b>OnBozor statistikasi</b>\n\n"
+            f"👥 Jami users: <b>{total_users}</b>\n"
+            f"📢 Faol e'lonlar: <b>{active}</b>\n"
+            f"⏳ Kutayotgan: <b>{pending}</b>\n"
+            f"🏪 Faol do'konlar: <b>{shops}</b>\n"
+            f"💰 Jami daromad: <b>{revenue:,} so'm</b>",
+            parse_mode="HTML",
+        )
+    except Exception as e:
+        logger.error("stats_command error: %s", e, exc_info=True)
+        await update.message.reply_text("❌ Xatolik yuz berdi.")
+
+
 async def back_to_main(update: Update, context: ContextTypes.DEFAULT_TYPE):
     from app.handlers.start import webapp_keyboard
     await update.message.reply_text(
@@ -218,6 +248,7 @@ def get_admin_handlers():
 
     return [
         CommandHandler("admin", admin_command),
+        CommandHandler("stats", stats_command),
         CommandHandler("help", _help_from_admin),
         MessageHandler(filters.Regex(r"^📊 Statistika$"), admin_stats),
         MessageHandler(filters.Regex(r"^📢 E'lonlar$"), admin_pending_listings),

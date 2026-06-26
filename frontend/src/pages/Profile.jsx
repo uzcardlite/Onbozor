@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import { listingsAPI, shopsAPI } from '../api/endpoints'
+import { listingsAPI, shopsAPI, analyticsAPI } from '../api/endpoints'
 import { useUserStore, useAppStore } from '../store/useStore'
 import { useTelegram } from '../hooks/useTelegram'
 
@@ -42,6 +42,12 @@ export default function Profile() {
     enabled: !isDemo, retry: false,
   })
 
+  const { data: analytics } = useQuery({
+    queryKey: ['my-analytics'],
+    queryFn: () => analyticsAPI.my().then((r) => r.data),
+    enabled: !isDemo, retry: false,
+  })
+
   const changeRegion = (viloyat) => {
     haptic('selection')
     setRegion(viloyat)
@@ -71,22 +77,18 @@ export default function Profile() {
 
       <div className="px-4 -mt-4">
         <div className="grid grid-cols-3 gap-2 mb-4">
-          <Link to="/referral" onClick={() => haptic('impact', 'light')} className="card p-3 text-center active:scale-95 transition-transform">
-            <p className="text-lg font-bold text-tg-accent animate-count-up">{user?.ref_count || 0}</p>
-            <p className="text-[10px] text-tg-muted mt-0.5">Referrallar</p>
-          </Link>
           <div className="card p-3 text-center">
-            <p className="text-lg font-bold text-tg-green animate-count-up">{listings?.length || 0}</p>
+            <p className="text-lg font-bold text-tg-accent animate-count-up">{analytics?.total_views || 0}</p>
+            <p className="text-[10px] text-tg-muted mt-0.5">Ko'rishlar</p>
+          </div>
+          <div className="card p-3 text-center">
+            <p className="text-lg font-bold text-tg-green animate-count-up">{analytics?.total_listings || listings?.length || 0}</p>
             <p className="text-[10px] text-tg-muted mt-0.5">E'lonlar</p>
           </div>
-          <Link
-            to={shops?.length ? `/shop/${shops[0].id}` : '/open-shop'}
-            onClick={() => haptic('impact', 'light')}
-            className="card p-3 text-center active:scale-95 transition-transform"
-          >
-            <p className="text-lg font-bold text-purple-400 animate-count-up">{shops?.length || 0}</p>
-            <p className="text-[10px] text-tg-muted mt-0.5">Do'konlar</p>
-          </Link>
+          <div className="card p-3 text-center">
+            <p className="text-lg font-bold text-purple-400 animate-count-up">{analytics?.total_favourites || 0}</p>
+            <p className="text-[10px] text-tg-muted mt-0.5">Sevimlilar</p>
+          </div>
         </div>
 
         <div className="card p-4 mb-4">
@@ -121,6 +123,40 @@ export default function Profile() {
             <span className="text-xs font-medium">Sevimlilar</span>
           </Link>
         </div>
+
+        {!isDemo && analytics?.views_by_day?.length > 0 && (
+          <div className="card p-4 mb-4">
+            <h3 className="text-xs font-semibold mb-3">📊 Oxirgi 7 kun ko'rishlari</h3>
+            <div className="flex items-end gap-1 h-20">
+              {analytics.views_by_day.map((d) => {
+                const max = Math.max(...analytics.views_by_day.map((x) => x.views), 1)
+                const h = Math.max((d.views / max) * 100, 4)
+                return (
+                  <div key={d.date} className="flex-1 flex flex-col items-center gap-1">
+                    <span className="text-[8px] text-tg-muted">{d.views}</span>
+                    <div className="w-full bg-tg-accent/80 rounded-t" style={{ height: `${h}%` }} />
+                    <span className="text-[7px] text-tg-muted">{d.date.slice(5)}</span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {!isDemo && analytics?.top_listings?.length > 0 && (
+          <div className="card p-4 mb-4">
+            <h3 className="text-xs font-semibold mb-3">🏆 Eng ko'p ko'rilgan</h3>
+            <div className="space-y-2">
+              {analytics.top_listings.map((l, i) => (
+                <Link key={l.id} to={`/listing/${l.id}`} className="flex items-center gap-2 text-xs">
+                  <span className="text-tg-yellow font-bold w-4">{i + 1}.</span>
+                  <span className="flex-1 truncate">{l.category}</span>
+                  <span className="text-tg-muted">👁 {l.views}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div>
           <div className="flex justify-between items-center mb-3">

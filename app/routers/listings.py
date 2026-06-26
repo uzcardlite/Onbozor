@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -50,12 +50,23 @@ async def my_listings(
 
 
 @router.get("/{listing_id}", response_model=ListingOut)
-async def get_single_listing(listing_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+async def get_single_listing(
+    listing_id: uuid.UUID,
+    request: Request,
+    user: User | None = Depends(get_optional_user),
+    db: AsyncSession = Depends(get_db),
+):
     listing = await get_listing(db, listing_id)
     if not listing:
         raise HTTPException(status_code=404, detail="E'lon topilmadi")
     await increment_views(db, listing_id)
     listing.views += 1
+
+    from app.models.listing_view import ListingView
+    ip = request.headers.get("X-Forwarded-For", "").split(",")[0].strip() or (request.client.host if request.client else None)
+    view = ListingView(listing_id=listing_id, viewer_id=user.id if user else None, ip_address=ip)
+    db.add(view)
+
     return ListingOut.model_validate(listing)
 
 
