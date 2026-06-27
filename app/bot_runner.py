@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from telegram.ext import Application, CommandHandler
 from app.config import settings
@@ -96,9 +95,13 @@ def main():
     app.add_handler(CommandHandler("leaderboard", _leaderboard_cmd))
     app.add_handler(CommandHandler("mybadges", _mybadges_cmd))
 
+    async def _post_init(application):
+        application.create_task(start_scheduler())
+        logger.info("Scheduler task created in bot loop")
+
+    app.post_init = _post_init
+
     logger.info("Bot polling + scheduler starting")
-    loop = asyncio.new_event_loop()
-    loop.create_task(start_scheduler())
     app.run_polling(drop_pending_updates=True)
 
 
