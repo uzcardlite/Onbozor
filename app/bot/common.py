@@ -138,19 +138,34 @@ def expiry(days: int = 30) -> datetime:
 
 # ───────────────────────── Telegram helpers ─────────────────────────
 async def is_subscribed(bot, user_id: int) -> bool:
-    """True if the user is a member of the mandatory channel.
+    """True if the user is subscribed to the mandatory channel.
 
-    Fails open (returns True) when the check itself errors so a
-    misconfigured channel never locks every user out of the bot.
+    Enforces subscription (fails CLOSED): if the membership status is not
+    member/admin/creator, or the check errors, access is denied. Admins always
+    pass so the owner is never locked out while configuring the channel.
+
+    NOTE: the bot MUST be an administrator of the channel for get_chat_member
+    to work — otherwise Telegram raises and every non-admin user is blocked.
     """
-    if not settings.CHANNEL_ID:
+    channel = settings.channel
+    if not channel:
+        return True
+    if user_id in settings.admin_ids_list:
         return True
     try:
-        member = await bot.get_chat_member(chat_id=settings.CHANNEL_ID, user_id=user_id)
-        return member.status in ("member", "administrator", "creator")
+        member = await bot.get_chat_member(chat_id=channel, user_id=user_id)
+        status = getattr(member, "status", None)
+        if status in ("member", "administrator", "creator", "owner"):
+            return True
+        if status == "restricted":
+            return bool(getattr(member, "is_member", False))
+        return False  # left / kicked
     except Exception as e:
-        logger.warning("Subscription check failed for %s: %s", user_id, e)
-        return True
+        logger.warning(
+            "Subscription check failed for user=%s channel=%s: %s "
+            "(is the bot an admin of the channel?)", user_id, channel, e
+        )
+        return False
 
 
 async def safe_edit(query, text: str, reply_markup=None, parse_mode="HTML"):

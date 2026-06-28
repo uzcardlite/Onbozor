@@ -14,9 +14,8 @@ def _rows(buttons, per_row=2):
 
 # ───────────────────────── Subscription / menu ─────────────────────────
 def subscribe_kb() -> M:
-    channel = settings.CHANNEL_ID.lstrip("@")
     return M([
-        [B("📢 Kanalga o'tish", url=f"https://t.me/{channel}")],
+        [B("📢 Kanalga o'tish", url=settings.channel_link)],
         [B("✅ Obuna bo'ldim", callback_data="check_sub")],
     ])
 

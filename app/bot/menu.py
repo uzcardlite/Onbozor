@@ -73,7 +73,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not await is_subscribed(context.bot, user_tg.id):
             await update.message.reply_text(
                 f"👋 Salom {user_tg.first_name}!\n\n"
-                "OnBozor botidan foydalanish uchun\navval kanalga obuna bo'ling 👇",
+                "⚠️ Botdan foydalanish uchun\nkanalga obuna bo'ling!",
                 reply_markup=kb.subscribe_kb(),
             )
             return ConversationHandler.END

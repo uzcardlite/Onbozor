@@ -34,6 +34,7 @@ class Settings(BaseSettings):
 
     ADMIN_IDS: str = "37453466"
     CHANNEL_ID: str = "@sarvar_qurbandurdiyev"
+    CHANNEL_USERNAME: str = ""
 
     class Config:
         env_file = ".env"
@@ -42,6 +43,20 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.ENVIRONMENT == "production"
+
+    @property
+    def channel(self) -> str:
+        """Mandatory-subscription channel — prefers CHANNEL_USERNAME (the
+        Railway variable), falls back to CHANNEL_ID, then the default."""
+        return (self.CHANNEL_USERNAME or self.CHANNEL_ID or "").strip()
+
+    @property
+    def channel_link(self) -> str:
+        """t.me link for the channel (only meaningful for @username channels)."""
+        ch = self.channel
+        if ch.startswith("@"):
+            return f"https://t.me/{ch[1:]}"
+        return f"https://t.me/{ch.lstrip('@')}"
 
     @property
     def admin_ids_list(self) -> list[int]:
