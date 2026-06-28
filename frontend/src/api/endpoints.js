@@ -2,6 +2,7 @@ import api from './client'
 
 export const authAPI = {
   telegram: (initData) => api.post('/auth/telegram', { init_data: initData }),
+  demo: (tgId, extra = {}) => api.post('/auth/demo', { tg_id: tgId, ...extra }),
 }
 
 export const listingsAPI = {

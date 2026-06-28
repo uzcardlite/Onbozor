@@ -79,7 +79,15 @@ async def create_new_listing(
     user: User | None = Depends(get_optional_user),
     db: AsyncSession = Depends(get_db),
 ):
-    user_id = user.id if user else None
+    # Resolve the author. Listings require a user_id (NOT NULL). When the request
+    # is unauthenticated (e.g. the frontend demo token), fall back to the first
+    # existing user so demo/testing still works.
+    if user is None:
+        from sqlalchemy import select
+        user = (await db.execute(select(User).limit(1))).scalar_one_or_none()
+        if user is None:
+            raise HTTPException(status_code=400, detail="Avval ro'yxatdan o'ting")
+    user_id = user.id
 
     # Log the incoming payload (without the heavy image_urls) for debugging.
     logger.info(

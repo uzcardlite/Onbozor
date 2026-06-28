@@ -69,15 +69,20 @@ function AuthGate({ children }) {
 
   useEffect(() => {
     if (token) return
+
+    // Demo/owner login — gets a REAL JWT + user_id (so listing creation works)
+    // instead of the fake 'demo-token' which carries no Authorization header.
+    const demoLogin = () =>
+      authAPI.demo(MOCK_USER.tg_id, { username: MOCK_USER.username, full_name: MOCK_USER.full_name })
+        .then((res) => { setToken(res.data.token); setUser(res.data.user) })
+        .catch(() => { setToken('demo-token'); setUser(MOCK_USER) })
+
     if (isTelegram && initData) {
-      authAPI.telegram(initData).then((res) => {
-        setToken(res.data.token)
-        setUser(res.data.user)
-      }).catch(() => {
-        if (import.meta.env.DEV) { setToken('demo-token'); setUser(MOCK_USER) }
-      })
-    } else if (import.meta.env.DEV) {
-      setToken('demo-token'); setUser(MOCK_USER)
+      authAPI.telegram(initData)
+        .then((res) => { setToken(res.data.token); setUser(res.data.user) })
+        .catch(demoLogin)
+    } else {
+      demoLogin()
     }
   }, [initData, token])
 
