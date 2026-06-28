@@ -26,9 +26,38 @@ if settings.SENTRY_DSN:
 
 _start_time = time.time()
 
+
+async def _ensure_schema():
+    """Guarantee the user gamification/verified columns exist, independent of
+    alembic state.
+
+    `alembic upgrade head` is a no-op when alembic_version already points at head
+    (even if the DDL never actually ran), so it can't repair a DB that is stuck
+    in that state. `stamp head` would make it worse. Running idempotent
+    ADD COLUMN IF NOT EXISTS directly is the reliable fix.
+    """
+    from sqlalchemy import text
+    from app.database import engine
+
+    statements = [
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT false",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS points INTEGER DEFAULT 0",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS level INTEGER DEFAULT 1",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS badges JSONB DEFAULT '[]'",
+    ]
+    try:
+        async with engine.begin() as conn:
+            for stmt in statements:
+                await conn.execute(text(stmt))
+        logger.info("Schema ensure: user columns present (is_verified, points, level, badges)")
+    except Exception as e:
+        logger.error("Schema ensure failed: %s", e, exc_info=True)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("OnBozor API starting (env=%s)", settings.ENVIRONMENT)
+    await _ensure_schema()
     yield
     logger.info("OnBozor API shutting down")
 
