@@ -56,6 +56,32 @@ async def upload_image(file: UploadFile) -> dict:
     return {"url": data_url, "public_id": "local"}
 
 
+def upload_image_bytes(contents: bytes, content_type: str = "image/jpeg") -> str | None:
+    """Upload raw image bytes (e.g. a Telegram photo) and return the secure URL.
+
+    Falls back to a base64 data URL when Cloudinary is not configured so the
+    bot keeps working in local/dev environments.
+    """
+    if _cloudinary_ready:
+        try:
+            result = cloudinary.uploader.upload(
+                contents,
+                folder="onbozor",
+                resource_type="image",
+                eager=[{"width": 800, "crop": "limit", "quality": "auto", "fetch_format": "auto"}],
+                eager_async=True,
+            )
+            logger.info("Cloudinary bot upload OK: %s (%d bytes)", result["public_id"], len(contents))
+            return result["secure_url"]
+        except Exception as e:
+            logger.error("Cloudinary bot upload failed: %s", e, exc_info=True)
+            return None
+
+    b64 = base64.b64encode(contents).decode()
+    logger.info("Cloudinary not configured, base64 fallback (%d bytes)", len(contents))
+    return f"data:{content_type};base64,{b64}"
+
+
 async def delete_image(public_id: str) -> bool:
     if not _cloudinary_ready or public_id == "local":
         return False

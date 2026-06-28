@@ -44,7 +44,19 @@ Onbozor/
 │   ├── models/            # SQLAlchemy modellar
 │   ├── routers/           # API endpointlar
 │   ├── services/          # Biznes logika
-│   └── handlers/          # Bot handlerlari
+│   └── bot/               # Telegram bot (FSM, in-bot flows)
+│       ├── registry.py    # Handlerlarni ro'yxatga olish
+│       ├── menu.py        # /start, obuna, asosiy menyu
+│       ├── listing.py     # E'lon berish (FSM) + ko'rish
+│       ├── search.py      # Qidiruv (pagination)
+│       ├── shops.py       # Do'konlar
+│       ├── profile.py     # Profil
+│       ├── favourites.py  # Sevimlilar
+│       ├── referral.py    # Referral
+│       ├── messages.py    # Xabarlar (chat)
+│       ├── rating.py      # Reyting
+│       ├── shop_create.py # Do'kon ochish (FSM)
+│       └── admin.py       # Admin (stats/pending/broadcast)
 ├── frontend/
 │   └── src/
 │       ├── pages/         # Sahifalar (lazy loaded)
@@ -54,6 +66,16 @@ Onbozor/
 │       └── hooks/         # Custom hooks
 └── alembic/versions/      # DB migrationlar
 ```
+
+## 🤖 Bot (@onbozornewbot)
+
+To'liq funksiyalar bot ichida (Web App talab qilinmaydi):
+- **Majburiy obuna**: `@sarvar_qurbandurdiyev` kanaliga obuna tekshiruvi
+- **Buyruqlar**: `/start`, `/elon_berish`, `/qidiruv`, `/dokonlar`, `/profil`,
+  `/referral`, `/sevimlilar`, `/xabarlar`, `/dokon_ochish`, `/help`
+- **Admin**: `/stats`, `/pending`, `/broadcast`, `/approve_<id>`, `/reject_<id>`
+- E'lon berish va do'kon ochish — qadamli FSM (ConversationHandler), har qadamda
+  ⬅️ Orqaga / 🏠 Bosh menyu, to'liq try/except xato boshqaruvi.
 
 ## 🚀 O'rnatish
 

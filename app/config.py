@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     DEBUG: bool = True
 
     ADMIN_IDS: str = "37453466"
-    CHANNEL_ID: str = "@StyleMarket_uz"
+    CHANNEL_ID: str = "@sarvar_qurbandurdiyev"
 
     class Config:
         env_file = ".env"
