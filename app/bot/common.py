@@ -11,7 +11,12 @@ from app.models.enums import SectionEnum, PaymentTypeEnum, ConditionEnum
 
 logger = logging.getLogger("onbozor.bot")
 
-WEB_APP = settings.FRONTEND_URL or "https://onbozor.vercel.app"
+# Telegram only accepts HTTPS URLs in WebAppInfo buttons. FRONTEND_URL may be
+# unset or a localhost http:// value on the server, which would make every
+# inline menu raise BadRequest — so fall back to the production URL unless we
+# have a real https:// origin.
+_frontend = (settings.FRONTEND_URL or "").strip().rstrip("/")
+WEB_APP = _frontend if _frontend.startswith("https://") else "https://onbozor.vercel.app"
 
 # ───────────────────────── Catalog ─────────────────────────
 # Keyed by the SectionEnum value so callback data maps straight to the DB enum.

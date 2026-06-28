@@ -119,21 +119,29 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def check_sub(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    if not await is_subscribed(context.bot, update.effective_user.id):
-        await query.answer("❌ Hali obuna bo'lmadingiz!", show_alert=True)
+    try:
+        if not await is_subscribed(context.bot, update.effective_user.id):
+            await query.answer("❌ Hali obuna bo'lmadingiz!", show_alert=True)
+            return ConversationHandler.END
+        await query.answer("✅ Obuna tasdiqlandi!")
+        user_tg = update.effective_user
+        async with async_session() as s:
+            user, _ = await get_or_create_user(
+                s, telegram_id=user_tg.id, full_name=user_tg.full_name, username=user_tg.username
+            )
+            needs_region = not user.viloyat
+        if needs_region:
+            await safe_edit(query, "📍 Viloyatingizni tanlang:", reply_markup=kb.regions_kb("reg_region"))
+            return Reg.REGION
+        await safe_edit(query, await _menu_text(user_tg.first_name or "do'st"), reply_markup=kb.main_menu_kb())
         return ConversationHandler.END
-    await query.answer("✅ Obuna tasdiqlandi!")
-    user_tg = update.effective_user
-    async with async_session() as s:
-        user, _ = await get_or_create_user(
-            s, telegram_id=user_tg.id, full_name=user_tg.full_name, username=user_tg.username
-        )
-        needs_region = not user.viloyat
-    if needs_region:
-        await safe_edit(query, "📍 Viloyatingizni tanlang:", reply_markup=kb.regions_kb("reg_region"))
-        return Reg.REGION
-    await safe_edit(query, await _menu_text(user_tg.first_name or "do'st"), reply_markup=kb.main_menu_kb())
-    return ConversationHandler.END
+    except Exception as e:
+        logger.error("check_sub error: %s", e, exc_info=True)
+        try:
+            await query.message.reply_text("🛍 OnBozor tayyor!", reply_markup=kb.main_menu_kb())
+        except Exception:
+            pass
+        return ConversationHandler.END
 
 
 async def set_region(update: Update, context: ContextTypes.DEFAULT_TYPE):
