@@ -151,6 +151,32 @@ async def not_found(request: Request, exc):
     return JSONResponse(status_code=404, content={"error": "not_found", "detail": "Sahifa topilmadi"})
 
 
+from fastapi.exceptions import RequestValidationError  # noqa: E402
+
+_FIELD_UZ = {
+    "section": "Bo'lim", "category": "Kategoriya", "payment_type": "To'lov turi",
+    "condition": "Holat", "price": "Narx", "viloyat": "Viloyat",
+    "seller_username": "Kontakt (username)", "description": "Tavsif",
+    "image_urls": "Rasmlar", "name": "Nom",
+}
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error(request: Request, exc: RequestValidationError):
+    """Return the first field error as a clear single message instead of the
+    default array, e.g. {"error": "validation", "detail": "Narx noto'g'ri"}."""
+    errors = exc.errors()
+    detail = "Ma'lumotlar noto'g'ri"
+    if errors:
+        first = errors[0]
+        loc = [p for p in first.get("loc", []) if p != "body"]
+        field = loc[-1] if loc else ""
+        field_uz = _FIELD_UZ.get(str(field), str(field))
+        detail = f"{field_uz}: {first.get('msg', 'noto‘g‘ri')}"
+    logger.warning("Validation error %s %s -> %s", request.method, request.url.path, errors)
+    return JSONResponse(status_code=422, content={"error": "validation", "detail": detail})
+
+
 @app.exception_handler(Exception)
 async def global_error(request: Request, exc: Exception):
     logger.error("Error: %s %s — %s", request.method, request.url.path, exc, exc_info=True)

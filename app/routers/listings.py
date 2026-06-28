@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
+from app.config import settings
 from app.database import get_db
 from app.dependencies import get_current_user, get_optional_user
 from app.models.user import User
@@ -80,25 +81,45 @@ async def create_new_listing(
     db: AsyncSession = Depends(get_db),
 ):
     user_id = user.id if user else None
-    listing = await create_listing(
-        db,
-        user_id=user_id,
-        shop_id=body.shop_id,
-        section=body.section,
-        category=body.category,
-        subcategory=body.subcategory,
-        payment_type=body.payment_type,
-        condition=body.condition,
-        price=body.price,
-        negotiable=body.negotiable,
-        viloyat=body.viloyat,
-        seller_username=body.seller_username,
-        description=body.description,
-        image_urls=body.image_urls or [],
-        expires_at=datetime.now(timezone.utc) + timedelta(days=30),
+
+    # Log the incoming payload (without the heavy image_urls) for debugging.
+    logger.info(
+        "POST /listings user=%s section=%s category=%s payment=%s condition=%s "
+        "price=%s viloyat=%s username=%s images=%d",
+        user_id, body.section, body.category, body.payment_type, body.condition,
+        body.price, body.viloyat, body.seller_username, len(body.image_urls or []),
     )
 
-    result = ListingOut.model_validate(listing)
+    # image_urls is optional — fall back to a placeholder so a listing never
+    # fails just because no image was provided.
+    from app.services.cloudinary import PLACEHOLDER_IMAGE
+    image_urls = body.image_urls or [PLACEHOLDER_IMAGE]
+
+    try:
+        listing = await create_listing(
+            db,
+            user_id=user_id,
+            shop_id=body.shop_id,
+            section=body.section,
+            category=body.category,
+            subcategory=body.subcategory,
+            payment_type=body.payment_type,
+            condition=body.condition,
+            price=body.price,
+            negotiable=body.negotiable,
+            viloyat=body.viloyat,
+            seller_username=body.seller_username,
+            description=body.description,
+            image_urls=image_urls,
+            expires_at=datetime.now(timezone.utc) + timedelta(days=30),
+        )
+        result = ListingOut.model_validate(listing)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("create_listing failed: %s", e, exc_info=True)
+        detail = str(e) if settings.DEBUG else "E'lon saqlashda xatolik yuz berdi"
+        raise HTTPException(status_code=400, detail=detail)
 
     try:
         from app.services.notification import admin_new_listing

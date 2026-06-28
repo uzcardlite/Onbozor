@@ -81,6 +81,7 @@ export default function AddListing() {
     onError: (err) => {
       haptic('notification', 'error')
       const data = err.response?.data
+      console.error('Listing create failed:', err.response?.status, data || err.message)
       let msg = "Xatolik yuz berdi"
       if (Array.isArray(data?.detail)) {
         msg = data.detail.map((e) => e.msg).join(', ')
