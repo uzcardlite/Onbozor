@@ -56,6 +56,8 @@ def main():
     app = build_application()
 
     async def _post_init(application):
+        from app.db_bootstrap import ensure_schema
+        await ensure_schema()
         application.create_task(start_scheduler())
         logger.info("Scheduler task created in bot loop")
 
