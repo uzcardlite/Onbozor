@@ -1,9 +1,10 @@
 import uuid
 from datetime import datetime
 from sqlalchemy import String, BigInteger, Boolean, ForeignKey, DateTime, Index
-from sqlalchemy.dialects.postgresql import UUID, ENUM
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base, UUIDMixin, TimestampMixin
+from app.models.enums import pg_enum
 
 import enum
 
@@ -24,7 +25,7 @@ class Promotion(Base, UUIDMixin, TimestampMixin):
     listing_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("listings.id"))
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
     type: Mapped[PromotionTypeEnum] = mapped_column(
-        ENUM(PromotionTypeEnum, name="promotion_type_enum", create_type=False)
+        pg_enum(PromotionTypeEnum, "promotion_type_enum")
     )
     price: Mapped[int] = mapped_column(BigInteger)
     starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

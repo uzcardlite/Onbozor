@@ -1,10 +1,12 @@
 import uuid
 from datetime import datetime
 from sqlalchemy import String, Text, Boolean, BigInteger, Integer, ForeignKey, DateTime, Index
-from sqlalchemy.dialects.postgresql import UUID, ENUM, JSONB
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base, UUIDMixin, TimestampMixin
-from app.models.enums import SectionEnum, PaymentTypeEnum, ConditionEnum, ListingStatusEnum
+from app.models.enums import (
+    SectionEnum, PaymentTypeEnum, ConditionEnum, ListingStatusEnum, pg_enum,
+)
 
 
 class Listing(Base, UUIDMixin, TimestampMixin):
@@ -26,15 +28,15 @@ class Listing(Base, UUIDMixin, TimestampMixin):
         UUID(as_uuid=True), ForeignKey("shops.id"), nullable=True
     )
     section: Mapped[SectionEnum] = mapped_column(
-        ENUM(SectionEnum, name="section_enum", create_type=False)
+        pg_enum(SectionEnum, "section_enum")
     )
     category: Mapped[str] = mapped_column(String(100))
     subcategory: Mapped[str | None] = mapped_column(String(100), nullable=True)
     payment_type: Mapped[PaymentTypeEnum] = mapped_column(
-        ENUM(PaymentTypeEnum, name="payment_type_enum", create_type=False)
+        pg_enum(PaymentTypeEnum, "payment_type_enum")
     )
     condition: Mapped[ConditionEnum] = mapped_column(
-        ENUM(ConditionEnum, name="condition_enum", create_type=False)
+        pg_enum(ConditionEnum, "condition_enum")
     )
     price: Mapped[int] = mapped_column(BigInteger)
     negotiable: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -48,7 +50,7 @@ class Listing(Base, UUIDMixin, TimestampMixin):
         DateTime(timezone=True), nullable=True
     )
     status: Mapped[ListingStatusEnum] = mapped_column(
-        ENUM(ListingStatusEnum, name="listing_status_enum", create_type=False),
+        pg_enum(ListingStatusEnum, "listing_status_enum"),
         default=ListingStatusEnum.PENDING,
     )
     reject_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)

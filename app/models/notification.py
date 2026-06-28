@@ -1,9 +1,9 @@
 import uuid
 from sqlalchemy import String, Text, Boolean, ForeignKey, Index
-from sqlalchemy.dialects.postgresql import UUID, ENUM
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base, UUIDMixin, TimestampMixin
-from app.models.enums import NotificationTypeEnum
+from app.models.enums import NotificationTypeEnum, pg_enum
 
 
 class Notification(Base, UUIDMixin, TimestampMixin):
@@ -17,7 +17,7 @@ class Notification(Base, UUIDMixin, TimestampMixin):
         UUID(as_uuid=True), ForeignKey("users.id")
     )
     type: Mapped[NotificationTypeEnum] = mapped_column(
-        ENUM(NotificationTypeEnum, name="notification_type_enum", create_type=False)
+        pg_enum(NotificationTypeEnum, "notification_type_enum")
     )
     title: Mapped[str] = mapped_column(String(255))
     body: Mapped[str] = mapped_column(Text)

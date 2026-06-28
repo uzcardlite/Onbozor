@@ -1,6 +1,22 @@
 import enum
 
 
+def pg_enum(enum_cls, name: str):
+    """Postgres ENUM column that persists the enum VALUE (e.g. 'texnika'),
+    matching the lowercase types created in migration 001.
+
+    Without ``values_callable`` SQLAlchemy stores the member NAME ('TEXNIKA'),
+    which the DB enum type rejects — breaking every insert.
+    """
+    from sqlalchemy.dialects.postgresql import ENUM
+    return ENUM(
+        enum_cls,
+        name=name,
+        create_type=False,
+        values_callable=lambda e: [m.value for m in e],
+    )
+
+
 class SectionEnum(str, enum.Enum):
     UYJOY = "uyjoy"
     TEXNIKA = "texnika"

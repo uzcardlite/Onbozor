@@ -1,10 +1,10 @@
 import uuid
 from datetime import datetime
 from sqlalchemy import String, Text, Boolean, BigInteger, ForeignKey, DateTime, Index
-from sqlalchemy.dialects.postgresql import UUID, ENUM
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base, UUIDMixin, TimestampMixin
-from app.models.enums import SectionEnum
+from app.models.enums import SectionEnum, pg_enum
 
 
 class Shop(Base, UUIDMixin, TimestampMixin):
@@ -22,7 +22,7 @@ class Shop(Base, UUIDMixin, TimestampMixin):
     name: Mapped[str] = mapped_column(String(255))
     description: Mapped[str] = mapped_column(Text)
     category: Mapped[SectionEnum] = mapped_column(
-        ENUM(SectionEnum, name="section_enum", create_type=False)
+        pg_enum(SectionEnum, "section_enum")
     )
     viloyat: Mapped[str | None] = mapped_column(String(100), nullable=True)
     icon_url: Mapped[str | None] = mapped_column(String(500), nullable=True)

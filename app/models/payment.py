@@ -1,9 +1,9 @@
 import uuid
 from sqlalchemy import String, BigInteger, ForeignKey, Index
-from sqlalchemy.dialects.postgresql import UUID, ENUM, JSONB
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base, UUIDMixin, TimestampMixin
-from app.models.enums import PaymentMethodEnum, PaymentStatusEnum
+from app.models.enums import PaymentMethodEnum, PaymentStatusEnum, pg_enum
 
 
 class Payment(Base, UUIDMixin, TimestampMixin):
@@ -25,11 +25,11 @@ class Payment(Base, UUIDMixin, TimestampMixin):
     )
     amount: Mapped[int] = mapped_column(BigInteger)
     payment_method: Mapped[PaymentMethodEnum] = mapped_column(
-        ENUM(PaymentMethodEnum, name="payment_method_enum", create_type=False)
+        pg_enum(PaymentMethodEnum, "payment_method_enum")
     )
     transaction_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     status: Mapped[PaymentStatusEnum] = mapped_column(
-        ENUM(PaymentStatusEnum, name="payment_status_enum", create_type=False),
+        pg_enum(PaymentStatusEnum, "payment_status_enum"),
         default=PaymentStatusEnum.PENDING,
     )
     payload: Mapped[dict] = mapped_column(JSONB, default=dict)

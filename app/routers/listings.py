@@ -7,7 +7,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
-from app.config import settings
 from app.database import get_db
 from app.dependencies import get_current_user, get_optional_user
 from app.models.user import User
@@ -117,9 +116,13 @@ async def create_new_listing(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("create_listing failed: %s", e, exc_info=True)
-        detail = str(e) if settings.DEBUG else "E'lon saqlashda xatolik yuz berdi"
-        raise HTTPException(status_code=400, detail=detail)
+        # Surface the real reason in the logs AND the API response so failures
+        # are diagnosable from the app/Railway logs instead of a generic message.
+        logger.error("Listing create error: %s", e, exc_info=True)
+        raise HTTPException(
+            status_code=400,
+            detail=f"E'lon saqlashda xatolik: {type(e).__name__}: {e}",
+        )
 
     try:
         from app.services.notification import admin_new_listing
