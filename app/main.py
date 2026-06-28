@@ -41,15 +41,6 @@ app = FastAPI(
     redoc_url=None,
 )
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.cors_origins_list,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type"],
-)
-
-
 # ── Rate Limiting ──
 _rate_limits: dict[str, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
 
@@ -72,7 +63,9 @@ def _get_client_ip(request: Request) -> str:
 @app.middleware("http")
 async def rate_limit_middleware(request: Request, call_next):
     path = request.url.path
-    if path in ("/health", "/", "/docs", "/openapi.json"):
+    # Never rate-limit CORS preflight or health/meta endpoints — a short-circuit
+    # here would drop the CORS headers and surface as a network error in the app.
+    if request.method == "OPTIONS" or path in ("/health", "/", "/docs", "/openapi.json"):
         return await call_next(request)
 
     client_ip = _get_client_ip(request)
@@ -101,6 +94,21 @@ async def logging_middleware(request: Request, call_next):
     if request.url.path not in ("/health",):
         logger.info("%s %s → %s (%sms)", request.method, request.url.path, response.status_code, ms)
     return response
+
+
+# CORS is registered LAST so it becomes the OUTERMOST middleware — this way even
+# short-circuited responses (e.g. 429 from the rate limiter) keep CORS headers,
+# so the browser/Mini App never sees them as a "no response" network error.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins_list,
+    # Allow any Vercel deployment (production + preview URLs) and the Telegram
+    # WebApp host, so the Mini App is never blocked by a missing exact origin.
+    allow_origin_regex=r"https://([a-z0-9-]+\.)*vercel\.app|https://([a-z0-9-]+\.)*telegram\.org",
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/health")
