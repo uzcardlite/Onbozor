@@ -120,30 +120,41 @@ async def create_new_listing(
             image_urls=image_urls,
             expires_at=datetime.now(timezone.utc) + timedelta(days=30),
         )
+        # Commit the listing NOW so it is durably saved (status=pending) before any
+        # side effects run. Otherwise a failure in award_points (e.g. a missing
+        # achievements table) would poison the transaction and the deferred commit
+        # in get_db would roll the listing back — "success" with nothing in the DB.
+        await db.commit()
+        await db.refresh(listing)
         result = ListingOut.model_validate(listing)
+        listing_id = str(listing.id)
+        logger.info("Listing %s saved (status=%s) for user=%s", listing_id, listing.status, user_id)
     except HTTPException:
         raise
     except Exception as e:
-        # Surface the real reason in the logs AND the API response so failures
-        # are diagnosable from the app/Railway logs instead of a generic message.
+        await db.rollback()
         logger.error("Listing create error: %s", e, exc_info=True)
         raise HTTPException(
             status_code=400,
             detail=f"E'lon saqlashda xatolik: {type(e).__name__}: {e}",
         )
 
+    # Side effects run in their OWN sessions so a failure here can never roll back
+    # the already-committed listing.
     try:
         from app.services.notification import admin_new_listing
-        await admin_new_listing(str(listing.id), listing.category, listing.price, listing.viloyat)
+        await admin_new_listing(listing_id, body.category, body.price, body.viloyat)
     except Exception as e:
         logger.error("admin notify failed: %s", e)
 
-    if user_id:
-        try:
-            from app.services.gamification import award_points
-            await award_points(db, user_id, "new_listing")
-        except Exception as e:
-            logger.error("award_points failed: %s", e)
+    try:
+        from app.database import async_session
+        from app.services.gamification import award_points
+        async with async_session() as s2:
+            await award_points(s2, user_id, "new_listing")
+            await s2.commit()
+    except Exception as e:
+        logger.error("award_points failed: %s", e)
 
     return result
 

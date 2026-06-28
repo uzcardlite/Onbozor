@@ -14,19 +14,31 @@ from app.database import engine
 
 logger = logging.getLogger("onbozor")
 
-_USER_COLUMNS = [
+_STATEMENTS = [
+    # users gamification/verified columns (from migrations 003 / 005)
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT false",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS points INTEGER DEFAULT 0",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS level INTEGER DEFAULT 1",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS badges JSONB DEFAULT '[]'",
+    # achievements table (from migration 005) — its absence makes award_points
+    # raise and (previously) poison the listing-create transaction.
+    """CREATE TABLE IF NOT EXISTS achievements (
+        id UUID PRIMARY KEY,
+        user_id UUID NOT NULL REFERENCES users(id),
+        type VARCHAR(50) NOT NULL,
+        earned_at TIMESTAMPTZ DEFAULT now(),
+        created_at TIMESTAMPTZ DEFAULT now()
+    )""",
+    "CREATE INDEX IF NOT EXISTS ix_achievements_user_id ON achievements(user_id)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS ix_achievements_user_type ON achievements(user_id, type)",
 ]
 
 
 async def ensure_schema() -> None:
     try:
         async with engine.begin() as conn:
-            for stmt in _USER_COLUMNS:
+            for stmt in _STATEMENTS:
                 await conn.execute(text(stmt))
-        logger.info("Schema ensure: user columns present (is_verified, points, level, badges)")
+        logger.info("Schema ensure: user columns + achievements table present")
     except Exception as e:
         logger.error("Schema ensure failed: %s", e, exc_info=True)
