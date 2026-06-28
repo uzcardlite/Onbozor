@@ -15,9 +15,10 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column("users", sa.Column("points", sa.Integer, server_default="0"))
-    op.add_column("users", sa.Column("level", sa.Integer, server_default="1"))
-    op.add_column("users", sa.Column("badges", JSONB, server_default="[]"))
+    # Idempotent so re-running the chain on a partially-migrated DB never fails.
+    op.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS points INTEGER DEFAULT 0")
+    op.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS level INTEGER DEFAULT 1")
+    op.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS badges JSONB DEFAULT '[]'")
 
     op.create_table(
         "achievements",

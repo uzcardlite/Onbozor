@@ -33,7 +33,8 @@ def upgrade() -> None:
     op.create_index("ix_promotions_user_id", "promotions", ["user_id"])
     op.create_index("ix_promotions_active", "promotions", ["is_active", "expires_at"])
 
-    op.add_column("users", sa.Column("is_verified", sa.Boolean, server_default="false"))
+    # Idempotent so re-running the chain on a partially-migrated DB never fails.
+    op.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT false")
 
 
 def downgrade() -> None:
