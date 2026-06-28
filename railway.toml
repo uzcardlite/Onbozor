@@ -1,7 +1,11 @@
 [build]
 builder = "nixpacks"
 
+# Web service runs ONLY the FastAPI server. The Telegram bot runs as a separate
+# service/worker: `python -m app.bot_runner` (see Procfile `worker`).
+# ${PORT:-8000} binds Railway's assigned $PORT (defaulting to 8000) so the public
+# domain can actually reach uvicorn — a hardcoded port causes 502 Bad Gateway.
 [deploy]
-startCommand = "python -m app.bot_runner & uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"
+startCommand = "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3
