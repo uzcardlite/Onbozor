@@ -8,7 +8,7 @@ function formatPrice(n) {
   return (n || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
 }
 
-const BOT_USERNAME = import.meta.env.VITE_BOT_USERNAME || 'OnBozorBot'
+const BOT_USERNAME = import.meta.env.VITE_BOT_USERNAME || 'onbozornewbot'
 
 export default function Referral() {
   const { haptic, tg, isTelegram } = useTelegram()

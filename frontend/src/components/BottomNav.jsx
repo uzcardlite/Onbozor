@@ -22,7 +22,7 @@ export default function BottomNav() {
     { to: '/search', icon: '🔍', label: 'Qidiruv' },
     { to: '/add-listing', icon: '➕', label: "E'lon", isCenter: true },
     { to: '/messages', icon: '💬', label: 'Xabarlar', badge: unread || 0 },
-    ...(user?.is_admin ? [{ to: '/admin', icon: '🔧', label: 'Admin' }] : [{ to: '/profile', icon: '👤', label: 'Profil' }]),
+    ...(localStorage.getItem('admin_authenticated') === 'true' ? [{ to: '/admin', icon: '🔧', label: 'Admin' }] : [{ to: '/profile', icon: '👤', label: 'Profil' }]),
   ]
 
   return (

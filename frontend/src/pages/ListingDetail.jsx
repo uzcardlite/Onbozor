@@ -123,7 +123,7 @@ export default function ListingDetail() {
           <button
             onClick={() => {
               haptic('impact')
-              const botUser = import.meta.env.VITE_BOT_USERNAME || 'onbozorbot'
+              const botUser = import.meta.env.VITE_BOT_USERNAME || 'onbozornewbot'
               const link = `https://t.me/${botUser}?start=listing_${listing.id}`
               const text = `${listing.category} — ${formatPrice(listing.price)} so'm (${listing.viloyat})`
               const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`
@@ -137,7 +137,7 @@ export default function ListingDetail() {
         <button
           onClick={() => {
             haptic('impact', 'light')
-            const botUser = import.meta.env.VITE_BOT_USERNAME || 'onbozorbot'
+            const botUser = import.meta.env.VITE_BOT_USERNAME || 'onbozornewbot'
             const link = `https://t.me/${botUser}?start=listing_${listing.id}`
             navigator.clipboard.writeText(link)
             toast.success('Havola nusxalandi!')

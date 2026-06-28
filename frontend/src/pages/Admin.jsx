@@ -1,8 +1,8 @@
 import { useState } from 'react'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { adminAPI } from '../api/endpoints'
-import { useUserStore } from '../store/useStore'
 import { useTelegram } from '../hooks/useTelegram'
 
 function formatNum(n) {
@@ -358,24 +358,26 @@ const TABS = [
 
 export default function Admin() {
   const [tab, setTab] = useState('stats')
-  const { user } = useUserStore()
+  const navigate = useNavigate()
   const { haptic } = useTelegram()
+  const authed = localStorage.getItem('admin_authenticated') === 'true'
 
-  if (!user?.is_admin) {
-    return (
-      <div className="min-h-screen bg-tg-bg flex items-center justify-center max-w-app mx-auto px-4">
-        <div className="text-center">
-          <p className="text-5xl mb-4">🔒</p>
-          <h1 className="text-lg font-bold mb-2">Ruxsat yo'q</h1>
-          <p className="text-sm text-tg-muted">Admin paneliga faqat adminlar kira oladi.</p>
-        </div>
-      </div>
-    )
+  if (!authed) {
+    return <Navigate to="/" replace />
+  }
+
+  const logout = () => {
+    haptic('impact')
+    localStorage.removeItem('admin_authenticated')
+    navigate('/')
   }
 
   return (
     <div className="pb-20 px-4 pt-4 max-w-app mx-auto">
-      <h1 className="text-xl font-bold mb-4">🔧 Admin Panel</h1>
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-xl font-bold">🔧 Admin Panel</h1>
+        <button onClick={logout} className="text-xs text-tg-red font-medium">Chiqish</button>
+      </div>
 
       <div className="flex gap-1 bg-tg-card rounded-xl p-1 mb-5">
         {TABS.map((t) => (

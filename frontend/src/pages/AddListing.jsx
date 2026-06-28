@@ -80,8 +80,18 @@ export default function AddListing() {
     },
     onError: (err) => {
       haptic('notification', 'error')
-      const detail = err.response?.data?.detail || err.response?.data?.error || "Xatolik yuz berdi"
-      setError(typeof detail === 'string' ? detail : JSON.stringify(detail))
+      const data = err.response?.data
+      let msg = "Xatolik yuz berdi"
+      if (Array.isArray(data?.detail)) {
+        msg = data.detail.map((e) => e.msg).join(', ')
+      } else if (typeof data?.detail === 'string') {
+        msg = data.detail
+      } else if (data?.error) {
+        msg = data.error
+      } else if (!err.response) {
+        msg = "Serverga ulanib bo'lmadi. Internetni tekshiring."
+      }
+      setError(msg)
       toast.error("E'lon yuborishda xatolik")
     },
   })
@@ -89,7 +99,9 @@ export default function AddListing() {
   const submit = () => {
     setError(null)
     const validUrls = form.image_urls.filter(u => u.startsWith('http') || u.startsWith('data:'))
-    mutation.mutate({
+    let username = form.seller_username.trim()
+    if (username && !username.startsWith('@')) username = '@' + username
+    const payload = {
       section: form.section,
       category: form.category,
       payment_type: form.payment_type,
@@ -97,10 +109,12 @@ export default function AddListing() {
       price: parseInt(form.price),
       negotiable: form.negotiable,
       viloyat: form.viloyat,
-      seller_username: form.seller_username,
+      seller_username: username,
       description: form.description,
       image_urls: validUrls,
-    })
+    }
+    if (import.meta.env.DEV) console.log('Listing payload:', payload)
+    mutation.mutate(payload)
   }
 
   const formatPrice = (n) => n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')

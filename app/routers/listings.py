@@ -1,8 +1,11 @@
+import logging
 import uuid
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
+
+logger = logging.getLogger(__name__)
 
 from app.database import get_db
 from app.dependencies import get_current_user, get_optional_user
@@ -95,14 +98,22 @@ async def create_new_listing(
         expires_at=datetime.now(timezone.utc) + timedelta(days=30),
     )
 
-    from app.services.notification import admin_new_listing
-    await admin_new_listing(str(listing.id), listing.category, listing.price, listing.viloyat)
+    result = ListingOut.model_validate(listing)
+
+    try:
+        from app.services.notification import admin_new_listing
+        await admin_new_listing(str(listing.id), listing.category, listing.price, listing.viloyat)
+    except Exception as e:
+        logger.error("admin notify failed: %s", e)
 
     if user_id:
-        from app.services.gamification import award_points
-        await award_points(db, user_id, "new_listing")
+        try:
+            from app.services.gamification import award_points
+            await award_points(db, user_id, "new_listing")
+        except Exception as e:
+            logger.error("award_points failed: %s", e)
 
-    return ListingOut.model_validate(listing)
+    return result
 
 
 @router.put("/{listing_id}", response_model=ListingOut)

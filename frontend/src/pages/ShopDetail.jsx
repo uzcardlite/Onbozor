@@ -99,7 +99,7 @@ export default function ShopDetail() {
           <button
             onClick={() => {
               haptic('impact')
-              const botUser = import.meta.env.VITE_BOT_USERNAME || 'onbozorbot'
+              const botUser = import.meta.env.VITE_BOT_USERNAME || 'onbozornewbot'
               const link = `https://t.me/${botUser}?start=shop_${shop.id}`
               const text = `🏪 ${shop.name} — ${shop.viloyat || "O'zbekiston"}`
               window.open(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`, '_blank')
@@ -112,7 +112,7 @@ export default function ShopDetail() {
         <button
           onClick={() => {
             haptic('impact', 'light')
-            const botUser = import.meta.env.VITE_BOT_USERNAME || 'onbozorbot'
+            const botUser = import.meta.env.VITE_BOT_USERNAME || 'onbozornewbot'
             navigator.clipboard.writeText(`https://t.me/${botUser}?start=shop_${shop.id}`)
             toast.success('Havola nusxalandi!')
           }}

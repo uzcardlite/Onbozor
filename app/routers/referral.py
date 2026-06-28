@@ -11,7 +11,7 @@ router = APIRouter(prefix="/referral", tags=["Referral"])
 async def get_referral_stats(user: User = Depends(get_current_user)):
     return ReferralStats(
         ref_code=user.ref_code,
-        ref_link=f"https://t.me/OnBozorBot?startapp={user.ref_code}",
+        ref_link=f"https://t.me/onbozornewbot?startapp={user.ref_code}",
         ref_count=user.ref_count,
         ref_earnings=user.ref_earnings,
     )

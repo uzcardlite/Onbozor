@@ -1,8 +1,10 @@
+import { useState, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import SearchBar from '../components/SearchBar'
 import ProductCard from '../components/ProductCard'
 import ShopCard from '../components/ShopCard'
+import AdminLoginModal from '../components/AdminLoginModal'
 import { ListSkeleton, ShopSkeleton } from '../components/LoadingSkeleton'
 import { listingsAPI, shopsAPI } from '../api/endpoints'
 import { useTelegram } from '../hooks/useTelegram'
@@ -50,6 +52,20 @@ function PopularSection() {
 
 export default function Home() {
   const { haptic } = useTelegram()
+  const [adminModal, setAdminModal] = useState(false)
+  const clickCount = useRef(0)
+  const clickTimer = useRef(null)
+
+  const onLogoClick = () => {
+    clickCount.current += 1
+    clearTimeout(clickTimer.current)
+    clickTimer.current = setTimeout(() => { clickCount.current = 0 }, 1500)
+    if (clickCount.current >= 5) {
+      clickCount.current = 0
+      haptic('notification', 'success')
+      setAdminModal(true)
+    }
+  }
 
   const { data: listings, isLoading: loadingListings, refetch: refetchListings } = useQuery({
     queryKey: ['listings', 'home'],
@@ -77,7 +93,7 @@ export default function Home() {
 
       <div className="bg-gradient-to-br from-tg-accent/20 via-tg-header to-tg-bg px-4 pt-5 pb-6 rounded-b-3xl">
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-xl bg-tg-accent flex items-center justify-center text-lg font-bold">🛒</div>
+          <div onClick={onLogoClick} className="w-10 h-10 rounded-xl bg-tg-accent flex items-center justify-center text-lg font-bold cursor-pointer select-none">🛒</div>
           <div>
             <h1 className="text-lg font-bold">OnBozor</h1>
             <p className="text-[11px] text-tg-muted">O'zbekiston bozori</p>
@@ -154,6 +170,8 @@ export default function Home() {
           </div>
         )}
       </div>
+
+      <AdminLoginModal open={adminModal} onClose={() => setAdminModal(false)} />
     </div>
   )
 }
